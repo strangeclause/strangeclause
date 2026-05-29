@@ -16,6 +16,7 @@ import {
   Image as ImageIcon,
   Video,
   Upload,
+  Search,
 } from "lucide-react";
 import { Inter } from "next/font/google";
 
@@ -23,6 +24,22 @@ const inter = Inter({
   subsets: ["latin"],
   weight: ["300", "400", "500", "600"],
 });
+
+type FavoriteSource = "music" | "movie" | "series" | "anime";
+
+type FavoriteItem = {
+  title: string;
+  image_url: string;
+  link: string;
+  subtitle?: string;
+  year?: string;
+  source?: string;
+};
+
+type FavoriteApiResult = FavoriteItem & {
+  api_id?: string;
+};
+
 
 type AboutProfile = {
   id: number;
@@ -44,22 +61,16 @@ type AboutProfile = {
   floating_notes: string[];
   bubble_chats: { side: "left" | "right"; text: string }[];
   usually_called: string[];
-  favorite_music: { title: string; image_url: string; link: string }[];
-  favorite_movies: { title: string; image_url: string; link: string }[];
-  favorite_series: { title: string; image_url: string; link: string }[];
-  favorite_anime: { title: string; image_url: string; link: string }[];
+  favorite_music: FavoriteItem[];
+  favorite_movies: FavoriteItem[];
+  favorite_series: FavoriteItem[];
+  favorite_anime: FavoriteItem[];
 };
 
 type RainDrop = {
   left: string;
   delay: string;
   duration: string;
-};
-
-type FavoriteItem = {
-  title: string;
-  image_url: string;
-  link: string;
 };
 
 const emptyProfile: AboutProfile = {
@@ -683,24 +694,28 @@ export default function AboutMeAdminPage() {
         <AdminSection title="favorite shelves">
           <FavoriteShelf
             title="fav music"
+            source="music"
             items={profile.favorite_music}
             onChange={(items) => updateField("favorite_music", items)}
           />
 
           <FavoriteShelf
             title="fav movie"
+            source="movie"
             items={profile.favorite_movies}
             onChange={(items) => updateField("favorite_movies", items)}
           />
 
           <FavoriteShelf
             title="fav series"
+            source="series"
             items={profile.favorite_series}
             onChange={(items) => updateField("favorite_series", items)}
           />
 
           <FavoriteShelf
             title="fav anime"
+            source="anime"
             items={profile.favorite_anime}
             onChange={(items) => updateField("favorite_anime", items)}
           />
@@ -1097,104 +1112,321 @@ const RemoveButton = ({ onClick }: { onClick: () => void }) => (
   </button>
 );
 
+const getCleanArtwork = (url?: string) => {
+  if (!url) return "";
+  return url
+    .replace("100x100bb.jpg", "600x600bb.jpg")
+    .replace("100x100bb.png", "600x600bb.png")
+    .replace("100x100", "600x600");
+};
+
+const normalizeYear = (value?: string | null) => {
+  if (!value) return "";
+  return String(value).slice(0, 4);
+};
+
+const searchFavoriteItems = async (
+  source: FavoriteSource,
+  query: string
+): Promise<FavoriteApiResult[]> => {
+  const cleanQuery = query.trim();
+  if (!cleanQuery) return [];
+
+  if (source === "anime") {
+    const response = await fetch(
+      `https://api.jikan.moe/v4/anime?q=${encodeURIComponent(cleanQuery)}&limit=8&sfw=true`
+    );
+    const payload = await response.json();
+
+    return (payload.data || []).map((item: any) => ({
+      api_id: String(item.mal_id || item.url || item.title),
+      title: item.title_english || item.title || item.title_japanese || "untitled anime",
+      subtitle: item.type || item.status || "anime",
+      year: normalizeYear(item.aired?.from),
+      image_url: item.images?.jpg?.large_image_url || item.images?.webp?.large_image_url || "",
+      link: item.url || "",
+      source: "jikan",
+    }));
+  }
+
+  if (source === "series") {
+    const response = await fetch(
+      `https://api.tvmaze.com/search/shows?q=${encodeURIComponent(cleanQuery)}`
+    );
+    const payload = await response.json();
+
+    return (payload || []).slice(0, 8).map((result: any) => {
+      const show = result.show || {};
+      return {
+        api_id: String(show.id || show.url || show.name),
+        title: show.name || "untitled series",
+        subtitle: Array.isArray(show.genres) && show.genres.length ? show.genres.slice(0, 2).join(" · ") : show.type || "series",
+        year: normalizeYear(show.premiered),
+        image_url: show.image?.original || show.image?.medium || "",
+        link: show.officialSite || show.url || "",
+        source: "tvmaze",
+      };
+    });
+  }
+
+  const entity = source === "music" ? "song" : "movie";
+  const media = source === "music" ? "music" : "movie";
+  const response = await fetch(
+    `https://itunes.apple.com/search?term=${encodeURIComponent(cleanQuery)}&media=${media}&entity=${entity}&limit=8`
+  );
+  const payload = await response.json();
+
+  return (payload.results || []).map((item: any) => ({
+    api_id: String(item.trackId || item.collectionId || item.trackViewUrl || item.trackName),
+    title: item.trackName || item.collectionName || "untitled",
+    subtitle:
+      source === "music"
+        ? item.artistName || "music"
+        : item.primaryGenreName || "movie",
+    year: normalizeYear(item.releaseDate),
+    image_url: getCleanArtwork(item.artworkUrl100 || item.artworkUrl600),
+    link: item.trackViewUrl || item.collectionViewUrl || "",
+    source: "itunes",
+  }));
+};
+
 const FavoriteShelf = ({
   title,
+  source,
   items,
   onChange,
 }: {
   title: string;
+  source: FavoriteSource;
   items: FavoriteItem[];
   onChange: (items: FavoriteItem[]) => void;
-}) => (
-  <div className="space-y-3 rounded-3xl border border-white/[0.045] bg-white/[0.01] p-4">
-    <div className="flex items-center justify-between gap-3 border-b border-white/[0.045] pb-3">
-      <div className="flex items-center gap-2">
-        <Sparkles size={11} strokeWidth={1.5} className="text-[#777777]" />
-        <p className="text-[8px] uppercase tracking-[0.22em] text-white/75">
-          {title}
-        </p>
+}) => {
+  const [query, setQuery] = useState("");
+  const [results, setResults] = useState<FavoriteApiResult[]>([]);
+  const [searching, setSearching] = useState(false);
+  const [error, setError] = useState("");
+
+  const runSearch = async () => {
+    if (!query.trim()) return;
+
+    try {
+      setSearching(true);
+      setError("");
+      const nextResults = await searchFavoriteItems(source, query);
+      setResults(nextResults);
+
+      if (!nextResults.length) {
+        setError("nothing found from the public shelf");
+      }
+    } catch (apiError) {
+      console.error("failed to search favorite:", apiError);
+      setError("failed to reach the public shelf");
+    } finally {
+      setSearching(false);
+    }
+  };
+
+  const addFromApi = (item: FavoriteApiResult) => {
+    const exists = items.some(
+      (saved) => saved.title === item.title && saved.link === item.link
+    );
+
+    if (exists) return;
+
+    onChange([
+      ...items,
+      {
+        title: item.title,
+        subtitle: item.subtitle || "",
+        year: item.year || "",
+        image_url: item.image_url || "",
+        link: item.link || "",
+        source: item.source || source,
+      },
+    ]);
+  };
+
+  return (
+    <div className="space-y-4 rounded-3xl border border-white/[0.045] bg-white/[0.01] p-4">
+      <div className="flex items-center justify-between gap-3 border-b border-white/[0.045] pb-3">
+        <div className="flex items-center gap-2">
+          <Sparkles size={11} strokeWidth={1.5} className="text-[#777777]" />
+          <div>
+            <p className="text-[8px] uppercase tracking-[0.22em] text-white/75">
+              {title}
+            </p>
+            <p className="mt-1 text-[7px] uppercase tracking-[0.14em] text-[#555555]">
+              search from api, then save to supabase
+            </p>
+          </div>
+        </div>
+
+        <button
+          type="button"
+          onClick={() =>
+            onChange([...items, { title: "", image_url: "", link: "", subtitle: "", year: "", source: "manual" }])
+          }
+          className="rounded-full border border-white/[0.055] bg-white/[0.025] px-3 py-1.5 text-[7px] uppercase tracking-[0.18em] text-[#777777] transition-all duration-700 hover:border-white/15 hover:bg-white/[0.04] hover:text-white"
+        >
+          manual
+        </button>
       </div>
 
-      <button
-        type="button"
-        onClick={() =>
-          onChange([...items, { title: "", image_url: "", link: "" }])
-        }
-        className="rounded-full border border-white/[0.055] bg-white/[0.025] px-3 py-1.5 text-[7px] uppercase tracking-[0.18em] text-[#777777] transition-all duration-700 hover:border-white/15 hover:bg-white/[0.04] hover:text-white"
-      >
-        add
-      </button>
-    </div>
-
-    <div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-4">
-      {items.map((item, index) => (
-        <div
-          key={index}
-          className="group relative aspect-square overflow-hidden rounded-3xl border border-white/[0.055] bg-white/[0.016] p-3 shadow-[0_12px_34px_rgba(0,0,0,0.42)] backdrop-blur-xl transition-all duration-700 hover:-translate-y-1 hover:border-white/10 hover:bg-white/[0.03]"
-        >
-          <div className="absolute inset-0">
-            {item.image_url ? (
-              <img
-                src={item.image_url}
-                alt={item.title}
-                className="h-full w-full object-cover grayscale opacity-45 transition-all duration-1000 group-hover:scale-105 group-hover:opacity-75"
-              />
-            ) : (
-              <div className="flex h-full w-full items-center justify-center text-[#444444]">
-                <MessageCircle size={18} strokeWidth={1.5} />
-              </div>
-            )}
-
-            <div className="absolute inset-0 bg-gradient-to-t from-black via-black/65 to-transparent" />
+      <div className="rounded-3xl border border-white/[0.045] bg-black/20 p-3">
+        <div className="flex flex-col gap-3 sm:flex-row">
+          <div className="flex min-w-0 flex-1 items-center gap-2 rounded-full border border-white/[0.055] bg-white/[0.018] px-4 py-3">
+            <Search size={12} strokeWidth={1.5} className="shrink-0 text-[#666666]" />
+            <input
+              value={query}
+              onChange={(event) => setQuery(event.target.value)}
+              onKeyDown={(event) => {
+                if (event.key === "Enter") runSearch();
+              }}
+              placeholder={`search ${source}...`}
+              className="min-w-0 flex-1 bg-transparent text-[9px] uppercase tracking-[0.16em] text-[#d0d0d0] outline-none placeholder:text-[#555555]"
+            />
           </div>
 
           <button
             type="button"
-            onClick={() => onChange(items.filter((_, i) => i !== index))}
-            className="absolute right-3 top-3 z-20 flex h-7 w-7 items-center justify-center rounded-full border border-white/[0.06] bg-black/60 text-[#777777] opacity-100 transition-all duration-700 hover:text-white sm:opacity-0 sm:group-hover:opacity-100"
+            onClick={runSearch}
+            disabled={searching || !query.trim()}
+            className="flex items-center justify-center gap-2 rounded-full border border-white/[0.055] bg-white/[0.025] px-5 py-3 text-[8px] uppercase tracking-[0.2em] text-[#888888] transition-all duration-700 hover:border-white/15 hover:bg-white/[0.04] hover:text-white disabled:opacity-40"
           >
-            <Trash2 size={10} />
+            {searching ? <Loader2 size={11} className="animate-spin" /> : <Search size={11} />}
+            find
           </button>
-
-          <div className="absolute bottom-3 left-3 right-3 z-20 space-y-2">
-            <input
-              value={item.title}
-              onChange={(event) => {
-                const next = [...items];
-                next[index] = { ...next[index], title: event.target.value };
-                onChange(next);
-              }}
-              placeholder="title"
-              className="w-full border-b border-white/[0.08] bg-transparent py-1 text-[8px] uppercase tracking-[0.16em] text-white outline-none placeholder:text-[#777777] focus:border-white/20"
-            />
-
-            <input
-              value={item.image_url}
-              onChange={(event) => {
-                const next = [...items];
-                next[index] = { ...next[index], image_url: event.target.value };
-                onChange(next);
-              }}
-              placeholder="image url"
-              className="w-full border-b border-white/[0.06] bg-transparent py-1 text-[7px] uppercase tracking-[0.14em] text-[#9a9a9a] outline-none placeholder:text-[#555555] focus:border-white/15"
-            />
-
-            <input
-              value={item.link}
-              onChange={(event) => {
-                const next = [...items];
-                next[index] = { ...next[index], link: event.target.value };
-                onChange(next);
-              }}
-              placeholder="link"
-              className="w-full border-b border-white/[0.06] bg-transparent py-1 text-[7px] uppercase tracking-[0.14em] text-[#9a9a9a] outline-none placeholder:text-[#555555] focus:border-white/15"
-            />
-          </div>
         </div>
-      ))}
+
+        {error && (
+          <p className="mt-3 text-[8px] uppercase tracking-[0.16em] text-[#777777]">
+            {error}
+          </p>
+        )}
+
+        {results.length > 0 && (
+          <div className="mt-4 grid grid-cols-2 gap-3 md:grid-cols-4">
+            {results.map((item) => (
+              <button
+                type="button"
+                key={`${item.api_id}-${item.title}`}
+                onClick={() => addFromApi(item)}
+                className="group overflow-hidden rounded-3xl border border-white/[0.055] bg-white/[0.016] text-left shadow-[0_12px_34px_rgba(0,0,0,0.42)] transition-all duration-700 hover:-translate-y-1 hover:border-white/10 hover:bg-white/[0.03]"
+              >
+                <div className="relative aspect-square bg-black/40">
+                  {item.image_url ? (
+                    <img
+                      src={item.image_url}
+                      alt={item.title}
+                      className="h-full w-full object-cover grayscale opacity-55 transition-all duration-1000 group-hover:scale-105 group-hover:opacity-80"
+                    />
+                  ) : (
+                    <div className="flex h-full w-full items-center justify-center text-[#444444]">
+                      <MessageCircle size={18} strokeWidth={1.5} />
+                    </div>
+                  )}
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/25 to-transparent" />
+                  <p className="absolute bottom-3 left-3 right-3 line-clamp-2 text-[8px] uppercase tracking-[0.14em] text-white/85">
+                    {item.title}
+                  </p>
+                </div>
+                <div className="space-y-1 p-3">
+                  <p className="line-clamp-1 text-[7px] uppercase tracking-[0.14em] text-[#777777]">
+                    {item.subtitle || source}
+                  </p>
+                  {item.year && (
+                    <p className="text-[7px] uppercase tracking-[0.14em] text-[#555555]">
+                      {item.year}
+                    </p>
+                  )}
+                </div>
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+
+      <div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-4">
+        {items.map((item, index) => (
+          <div
+            key={index}
+            className="group relative aspect-square overflow-hidden rounded-3xl border border-white/[0.055] bg-white/[0.016] p-3 shadow-[0_12px_34px_rgba(0,0,0,0.42)] backdrop-blur-xl transition-all duration-700 hover:-translate-y-1 hover:border-white/10 hover:bg-white/[0.03]"
+          >
+            <div className="absolute inset-0">
+              {item.image_url ? (
+                <img
+                  src={item.image_url}
+                  alt={item.title}
+                  className="h-full w-full object-cover grayscale opacity-45 transition-all duration-1000 group-hover:scale-105 group-hover:opacity-75"
+                />
+              ) : (
+                <div className="flex h-full w-full items-center justify-center text-[#444444]">
+                  <MessageCircle size={18} strokeWidth={1.5} />
+                </div>
+              )}
+
+              <div className="absolute inset-0 bg-gradient-to-t from-black via-black/65 to-transparent" />
+            </div>
+
+            <button
+              type="button"
+              onClick={() => onChange(items.filter((_, i) => i !== index))}
+              className="absolute right-3 top-3 z-20 flex h-7 w-7 items-center justify-center rounded-full border border-white/[0.06] bg-black/60 text-[#777777] opacity-100 transition-all duration-700 hover:text-white sm:opacity-0 sm:group-hover:opacity-100"
+            >
+              <Trash2 size={10} />
+            </button>
+
+            <div className="absolute bottom-3 left-3 right-3 z-20 space-y-2">
+              <input
+                value={item.title}
+                onChange={(event) => {
+                  const next = [...items];
+                  next[index] = { ...next[index], title: event.target.value };
+                  onChange(next);
+                }}
+                placeholder="title"
+                className="w-full border-b border-white/[0.08] bg-transparent py-1 text-[8px] uppercase tracking-[0.16em] text-white outline-none placeholder:text-[#777777] focus:border-white/20"
+              />
+
+              <input
+                value={item.subtitle || ""}
+                onChange={(event) => {
+                  const next = [...items];
+                  next[index] = { ...next[index], subtitle: event.target.value };
+                  onChange(next);
+                }}
+                placeholder="subtitle"
+                className="w-full border-b border-white/[0.06] bg-transparent py-1 text-[7px] uppercase tracking-[0.14em] text-[#9a9a9a] outline-none placeholder:text-[#555555] focus:border-white/15"
+              />
+
+              <input
+                value={item.image_url}
+                onChange={(event) => {
+                  const next = [...items];
+                  next[index] = { ...next[index], image_url: event.target.value };
+                  onChange(next);
+                }}
+                placeholder="image url"
+                className="w-full border-b border-white/[0.06] bg-transparent py-1 text-[7px] uppercase tracking-[0.14em] text-[#9a9a9a] outline-none placeholder:text-[#555555] focus:border-white/15"
+              />
+
+              <input
+                value={item.link}
+                onChange={(event) => {
+                  const next = [...items];
+                  next[index] = { ...next[index], link: event.target.value };
+                  onChange(next);
+                }}
+                placeholder="link"
+                className="w-full border-b border-white/[0.06] bg-transparent py-1 text-[7px] uppercase tracking-[0.14em] text-[#9a9a9a] outline-none placeholder:text-[#555555] focus:border-white/15"
+              />
+            </div>
+          </div>
+        ))}
+      </div>
     </div>
-  </div>
-);
+  );
+};
 
 function Background({ rainDrops }: { rainDrops: RainDrop[] }) {
   return (
