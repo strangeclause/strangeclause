@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "../../../lib/supabase";
 import { Inter } from "next/font/google";
 import {
@@ -13,6 +13,8 @@ import {
   CloudRain,
   ChevronDown,
   ChevronUp,
+  Upload,
+  Send,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 
@@ -37,11 +39,22 @@ const COLLAPSE_SIZE = 10;
 
 export default function MemoryPage() {
   const router = useRouter();
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   const [images, setImages] = useState<MemoryImage[]>([]);
+  const [files, setFiles] = useState<File[]>([]);
   const [loading, setLoading] = useState(false);
+  const [authLoading, setAuthLoading] = useState(true);
+  const [status, setStatus] = useState("");
+  const [userEmail, setUserEmail] = useState<string | null>(null);
+  const [modalOpen, setModalOpen] = useState(false);
   const [visibleCount, setVisibleCount] = useState(COLLAPSE_SIZE);
   const [rainDrops, setRainDrops] = useState<RainDrop[]>([]);
+
+  const visibleImages = images.slice(0, visibleCount);
+  const hasMore = visibleCount < images.length;
+  const isExpanded = images.length > 0 && visibleCount >= images.length;
+  const isLoggedIn = Boolean(userEmail);
 
   const footerLines = useMemo(
     () => [
@@ -70,55 +83,148 @@ export default function MemoryPage() {
   }, []);
 
   const fetchImages = async () => {
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from("memories")
       .select("*")
       .order("id", { ascending: false });
 
-    setImages(data || []);
-  };
-
-  useEffect(() => {
-    fetchImages();
-  }, []);
-
-  const upload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-
-    if (!file) return;
-
-    setLoading(true);
-
-    const filePath = `${Date.now()}-${file.name}`;
-
-    const { error } = await supabase.storage.from("memory").upload(filePath, file);
-
     if (error) {
-      setLoading(false);
+      setStatus("failed to load fragments");
+      setTimeout(() => setStatus(""), 3000);
       return;
     }
 
-    const { data } = supabase.storage.from("memory").getPublicUrl(filePath);
+    setImages((data || []) as MemoryImage[]);
+  };
 
-    await supabase.from("memories").insert({
-      image_url: data.publicUrl,
-      file_path: filePath,
-    });
+  useEffect(() => {
+    const init = async () => {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
 
-    setLoading(false);
-    setVisibleCount(COLLAPSE_SIZE);
-    fetchImages();
+      const email = session?.user?.email || null;
+      setUserEmail(email);
+      setAuthLoading(false);
+
+      if (!email) {
+        router.replace("/admin");
+        return;
+      }
+
+      await fetchImages();
+    };
+
+    init();
+
+    const { data: listener } = supabase.auth.onAuthStateChange(
+      async (_event, session) => {
+        const email = session?.user?.email || null;
+        setUserEmail(email);
+
+        if (!email) {
+          router.replace("/admin");
+        }
+      }
+    );
+
+    return () => {
+      listener.subscription.unsubscribe();
+    };
+  }, [router]);
+
+  const closeModal = () => {
+    if (loading) return;
+
+    setModalOpen(false);
+    setFiles([]);
+
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
+  };
+
+  const upload = async () => {
+    if (files.length === 0) {
+      setStatus("the jar is empty");
+      setTimeout(() => setStatus(""), 3000);
+      return;
+    }
+
+    if (!isLoggedIn) {
+      router.replace("/admin");
+      return;
+    }
+
+    setLoading(true);
+
+    try {
+      const uploadedRows = await Promise.all(
+        files.map(async (file, index) => {
+          const safeName = file.name.replace(/\s+/g, "-").toLowerCase();
+          const filePath = `${Date.now()}-${index}-${crypto.randomUUID()}-${safeName}`;
+
+          const { error: uploadError } = await supabase.storage
+            .from("memory")
+            .upload(filePath, file);
+
+          if (uploadError) throw uploadError;
+
+          const { data } = supabase.storage.from("memory").getPublicUrl(filePath);
+
+          return {
+            image_url: data.publicUrl,
+            file_path: filePath,
+          };
+        })
+      );
+
+      const { error: dbError } = await supabase
+        .from("memories")
+        .insert(uploadedRows);
+
+      if (dbError) throw dbError;
+
+      setStatus(
+        `${uploadedRows.length} fragment${uploadedRows.length > 1 ? "s" : ""} saved`
+      );
+      setFiles([]);
+      setModalOpen(false);
+      setVisibleCount(COLLAPSE_SIZE);
+
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
+      }
+
+      await fetchImages();
+    } catch {
+      setStatus("it did not want to stay");
+    } finally {
+      setLoading(false);
+      setTimeout(() => setStatus(""), 3000);
+    }
   };
 
   const remove = async (id: number, file_path: string) => {
-    await supabase.from("memories").delete().eq("id", id);
-    await supabase.storage.from("memory").remove([file_path]);
-    fetchImages();
-  };
+    if (!confirm("Let this memory fade from the jar?")) return;
 
-  const visibleImages = images.slice(0, visibleCount);
-  const hasMore = visibleCount < images.length;
-  const isExpanded = visibleCount >= images.length;
+    const { error: dbError } = await supabase
+      .from("memories")
+      .delete()
+      .eq("id", id);
+
+    if (dbError) {
+      setStatus("it is stuck here");
+      setTimeout(() => setStatus(""), 3000);
+      return;
+    }
+
+    await supabase.storage.from("memory").remove([file_path]);
+    setStatus("erased");
+    await fetchImages();
+
+    setTimeout(() => setStatus(""), 3000);
+  };
 
   const showMore = () => {
     setVisibleCount((prev) => Math.min(prev + COLLAPSE_SIZE, images.length));
@@ -131,6 +237,14 @@ export default function MemoryPage() {
       ?.scrollIntoView({ behavior: "smooth", block: "start" });
   };
 
+  if (authLoading || !userEmail) {
+    return (
+      <main className="flex min-h-screen items-center justify-center bg-[#020202] text-white">
+        <Loader2 size={18} className="animate-spin" />
+      </main>
+    );
+  }
+
   return (
     <main
       id="main-content"
@@ -139,10 +253,11 @@ export default function MemoryPage() {
       <Background rainDrops={rainDrops} />
 
       <nav className="fixed left-0 right-0 top-0 z-[60] border-b border-white/[0.045] bg-[#020202]/72 backdrop-blur-xl">
-        <div className="mx-auto flex max-w-[1500px] items-center justify-between gap-4 px-6 py-5 sm:px-12 md:px-20 lg:px-28 xl:px-36">
+        <div className="mx-auto flex max-w-[1500px] items-center justify-between gap-3 px-5 py-4 sm:px-8 sm:py-5 md:px-20 lg:px-28 xl:px-36">
           <button
+            type="button"
             onClick={() => router.push("/admin")}
-            className="group flex shrink-0 items-center gap-2 text-[8.5px] uppercase tracking-[0.22em] text-[#666666] transition-colors duration-700 hover:text-white/80 sm:text-[9px]"
+            className="group hidden shrink-0 items-center gap-2 text-[8.5px] uppercase tracking-[0.22em] text-[#666666] transition-colors duration-700 hover:text-white/80 md:flex md:text-[9px]"
           >
             <ArrowLeft
               size={12}
@@ -153,36 +268,42 @@ export default function MemoryPage() {
           </button>
 
           <button
+            type="button"
             onClick={() => router.push("/")}
-            className="group flex min-w-0 flex-col items-center text-center"
+            className="group mr-auto flex min-w-0 flex-col items-start text-left md:mr-0 md:items-center md:text-center"
           >
             <span className="text-[10px] font-medium uppercase tracking-[0.24em] text-white/80 sm:text-[11px]">
               strange clause
             </span>
 
-            <span className="hidden max-w-[300px] truncate text-[8px] lowercase tracking-[0.12em] text-[#666666] transition-colors duration-500 group-hover:text-white/60 sm:block">
+            <span className="block max-w-[220px] truncate text-[8px] lowercase tracking-[0.12em] text-[#666666] transition-colors duration-500 group-hover:text-white/60 sm:max-w-[300px]">
               memories
             </span>
           </button>
 
-          <label className="group flex shrink-0 cursor-pointer items-center gap-2 rounded-full border border-white/[0.045] bg-white/[0.016] px-3.5 py-2 text-[8px] uppercase tracking-[0.22em] text-[#777777] shadow-[0_10px_30px_rgba(0,0,0,0.45)] transition-all duration-700 hover:-translate-y-0.5 hover:border-white/10 hover:bg-white/[0.03] hover:text-white/75 sm:px-4 sm:text-[8.5px]">
-            {loading ? (
-              <Loader2 size={11} strokeWidth={1.5} className="animate-spin" />
-            ) : (
-              <Plus
-                size={11}
-                strokeWidth={1.5}
-                className="transition-transform duration-700 group-hover:rotate-90"
-              />
-            )}
-            {loading ? "saving" : "add"}
-            <input type="file" hidden accept="image/*" onChange={upload} />
-          </label>
+          <button
+            type="button"
+            onClick={() => setModalOpen(true)}
+            className="group flex shrink-0 items-center gap-2 rounded-full border border-white/[0.045] bg-white/[0.016] px-3 py-2 text-[8px] uppercase tracking-[0.22em] text-[#777777] shadow-[0_10px_30px_rgba(0,0,0,0.45)] transition-all duration-700 hover:-translate-y-0.5 hover:border-white/10 hover:bg-white/[0.03] hover:text-white/75 sm:px-4 sm:text-[8.5px]"
+          >
+            <Plus
+              size={11}
+              strokeWidth={1.5}
+              className="transition-transform duration-700 group-hover:rotate-90"
+            />
+            <span className="hidden sm:inline">add</span>
+          </button>
         </div>
       </nav>
 
-      <div className="relative z-20 mx-auto max-w-[1500px] px-6 pb-24 pt-36 sm:px-12 md:px-20 md:pt-44 lg:px-28 xl:px-36">
-        <header className="animate-fade-in mb-12 grid grid-cols-1 items-end gap-6 lg:grid-cols-[1.1fr_0.9fr]">
+      {status && (
+        <div className="animate-fade-in fixed left-1/2 top-24 z-[999] -translate-x-1/2 rounded-full border border-white/[0.045] bg-[#070707]/95 px-5 py-3 text-[8px] uppercase tracking-[0.22em] text-[#b7b7b7] shadow-[0_20px_60px_rgba(0,0,0,0.55)] backdrop-blur-xl">
+          {status}
+        </div>
+      )}
+
+      <div className="relative z-20 mx-auto max-w-[1500px] px-5 pb-20 pt-28 sm:px-8 sm:pt-36 md:px-20 md:pt-44 lg:px-28 xl:px-36">
+        <header className="animate-fade-in mb-10 grid grid-cols-1 items-end gap-5 sm:mb-12 lg:grid-cols-[1.1fr_0.9fr] lg:gap-8">
           <div className="max-w-2xl space-y-5">
             <div className="flex items-center gap-2">
               <CloudRain size={12} className="text-[#666666] stroke-[1.4px]" />
@@ -191,7 +312,7 @@ export default function MemoryPage() {
               </p>
             </div>
 
-            <h1 className="max-w-2xl text-[30px] font-light leading-[1.08] tracking-[-0.06em] text-white/90 md:text-[42px]">
+            <h1 className="max-w-2xl text-[26px] font-light leading-[1.08] tracking-[-0.06em] text-white/90 sm:text-[32px] md:text-[42px]">
               things saved
               <br />
               inside the jar.
@@ -211,7 +332,9 @@ export default function MemoryPage() {
               <Sparkles size={12} strokeWidth={1.5} className="text-[#666666]" />
             </div>
 
-            <p className="text-[13px] text-white/80">{images.length} memories saved</p>
+            <p className="text-[13px] text-white/80">
+              {images.length} memories saved
+            </p>
           </aside>
         </header>
 
@@ -243,8 +366,9 @@ export default function MemoryPage() {
                     <div className="absolute inset-0 z-20 bg-gradient-to-t from-black/75 via-black/10 to-transparent opacity-80" />
 
                     <button
+                      type="button"
                       onClick={() => remove(img.id, img.file_path)}
-                      className="absolute right-3 top-3 z-30 rounded-full border border-white/[0.055] bg-black/70 p-2 text-[#777777] opacity-0 backdrop-blur-md transition-all duration-700 hover:text-white group-hover:opacity-100"
+                      className="absolute right-3 top-3 z-30 rounded-full border border-white/[0.055] bg-black/70 p-2 text-[#777777] opacity-100 backdrop-blur-md transition-all duration-700 hover:text-white sm:opacity-0 sm:group-hover:opacity-100"
                       title="remove memory"
                     >
                       <X size={12} strokeWidth={1.5} />
@@ -297,6 +421,126 @@ export default function MemoryPage() {
         </section>
       </div>
 
+      {modalOpen && (
+        <Modal title="add memories" onClose={closeModal} loading={loading}>
+          <div className="grid gap-4">
+            <input
+              type="file"
+              hidden
+              multiple
+              ref={fileInputRef}
+              accept="image/*"
+              onChange={(event) =>
+                setFiles(Array.from(event.target.files || []))
+              }
+            />
+
+            <button
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+              className="flex min-h-[220px] w-full cursor-pointer flex-col items-center justify-center overflow-hidden rounded-2xl border border-dashed border-white/[0.055] bg-white/[0.025] p-4 text-center transition-all duration-700 hover:border-white/15 hover:bg-white/[0.04]"
+            >
+              {files.length > 0 ? (
+                <div className="grid w-full grid-cols-2 gap-2 sm:grid-cols-3">
+                  {files.slice(0, 6).map((file, index) => (
+                    <div
+                      key={`${file.name}-${index}`}
+                      className="relative aspect-square overflow-hidden rounded-xl border border-white/[0.05] bg-black"
+                    >
+                      <img
+                        src={URL.createObjectURL(file)}
+                        alt="preview"
+                        className="h-full w-full object-cover grayscale opacity-80"
+                      />
+                    </div>
+                  ))}
+
+                  {files.length > 6 && (
+                    <div className="flex aspect-square items-center justify-center rounded-xl border border-white/[0.05] bg-black/45 text-[8px] uppercase tracking-[0.18em] text-[#777777]">
+                      +{files.length - 6} more
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div className="flex flex-col items-center gap-3">
+                  <Upload
+                    size={18}
+                    strokeWidth={1.5}
+                    className="text-[#777777]"
+                  />
+                  <p className="text-[8px] uppercase tracking-[0.18em] text-[#777777]">
+                    choose memories
+                  </p>
+                  <p className="max-w-xs text-[10.5px] leading-relaxed text-[#666666]">
+                    select one or more fragments, then let them stay inside the
+                    jar.
+                  </p>
+                </div>
+              )}
+            </button>
+
+            {files.length > 0 && (
+              <div className="rounded-2xl border border-white/[0.045] bg-black/25 p-3">
+                <p className="mb-2 text-[8px] uppercase tracking-[0.18em] text-[#666666]">
+                  {files.length} selected
+                </p>
+
+                <div className="modal-scroll max-h-24 space-y-1 overflow-y-auto pr-1">
+                  {files.map((file, index) => (
+                    <div
+                      key={`${file.name}-selected-${index}`}
+                      className="flex items-center justify-between gap-3 text-[10px] text-[#777777]"
+                    >
+                      <span className="line-clamp-1">{file.name}</span>
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setFiles((prev) =>
+                            prev.filter((_, fileIndex) => fileIndex !== index)
+                          )
+                        }
+                        className="shrink-0 text-[#666666] transition hover:text-white"
+                      >
+                        <X size={11} />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            <div className="flex items-center justify-between border-t border-white/[0.055] pt-4">
+              <p className="text-[8px] uppercase tracking-[0.18em] text-[#666666]">
+                locked room
+              </p>
+
+              <button
+                type="button"
+                onClick={upload}
+                disabled={loading || files.length === 0}
+                className="group flex items-center gap-2 rounded-full border border-white/[0.055] bg-white/[0.025] px-4 py-2 text-[8px] uppercase tracking-[0.22em] text-[#9a9a9a] shadow-[0_10px_30px_rgba(0,0,0,0.4)] transition-all duration-700 hover:-translate-y-0.5 hover:border-white/15 hover:bg-white/[0.04] hover:text-white disabled:cursor-not-allowed disabled:opacity-20"
+              >
+                {loading ? (
+                  <Loader2
+                    size={10}
+                    strokeWidth={1.5}
+                    className="animate-spin"
+                  />
+                ) : (
+                  <Send
+                    size={10}
+                    strokeWidth={1.5}
+                    className="transition-transform duration-700 group-hover:translate-x-0.5"
+                  />
+                )}
+
+                {loading ? "saving" : "release"}
+              </button>
+            </div>
+          </div>
+        </Modal>
+      )}
+
       <footer className="relative z-20 border-t border-white/[0.045] bg-[#020202]/90 px-6 py-14 text-center backdrop-blur-xl">
         <p className="mx-auto max-w-xl text-[10.5px] leading-relaxed tracking-[0.12em] text-[#555555]">
           {footerText}
@@ -305,6 +549,63 @@ export default function MemoryPage() {
 
       <GlobalStyles />
     </main>
+  );
+}
+
+function Modal({
+  title,
+  children,
+  onClose,
+  loading,
+}: {
+  title: string;
+  children: React.ReactNode;
+  onClose: () => void;
+  loading: boolean;
+}) {
+  return (
+    <div
+      onClick={onClose}
+      className="animate-modal fixed inset-0 z-[999] flex items-center justify-center bg-black/90 p-4 backdrop-blur-xl sm:p-6"
+    >
+      <div
+        onClick={(event) => event.stopPropagation()}
+        className="modal-scroll relative max-h-[90vh] w-full max-w-3xl overflow-y-auto rounded-3xl border border-white/[0.06] bg-[#070707]/95 p-5 shadow-[0_30px_90px_rgba(0,0,0,0.75)] backdrop-blur-2xl sm:p-6"
+      >
+        <div className="pointer-events-none absolute inset-x-10 top-0 h-px bg-gradient-to-r from-transparent via-white/12 to-transparent" />
+
+        <button
+          type="button"
+          onClick={onClose}
+          disabled={loading}
+          className="absolute right-5 top-5 z-20 text-[#666666] transition-colors duration-700 hover:text-white disabled:opacity-30"
+        >
+          <X size={14} />
+        </button>
+
+        <div className="mb-7 text-center">
+          <div className="mb-3 flex justify-center">
+            <div className="rounded-full border border-white/[0.06] bg-white/[0.025] p-3 shadow-[0_0_24px_rgba(255,255,255,0.035)]">
+              <Sparkles
+                size={14}
+                strokeWidth={1.5}
+                className="text-[#d0d0d0]"
+              />
+            </div>
+          </div>
+
+          <h2 className="text-[14px] font-light uppercase tracking-[0.22em] text-white/90">
+            {title}
+          </h2>
+
+          <p className="mx-auto mt-2 max-w-sm text-[11px] leading-relaxed text-[#777777]">
+            put down one quiet image so it stays here after you close the tab.
+          </p>
+        </div>
+
+        {children}
+      </div>
+    </div>
   );
 }
 
@@ -359,9 +660,7 @@ const EmptyMemory = () => (
   <div className="flex flex-col items-center rounded-3xl border border-dashed border-white/[0.045] bg-white/[0.012] py-20 text-[#666666]">
     <Ghost size={16} strokeWidth={1.5} className="mb-3 opacity-60" />
 
-    <p className="text-[8px] uppercase tracking-[0.22em]">
-      the jar is empty
-    </p>
+    <p className="text-[8px] uppercase tracking-[0.22em]">the jar is empty</p>
   </div>
 );
 
@@ -453,8 +752,42 @@ const GlobalStyles = () => (
       }
     }
 
+    @keyframes modalFade {
+      from {
+        opacity: 0;
+        transform: scale(0.98) translateY(10px);
+        filter: blur(8px);
+      }
+
+      to {
+        opacity: 1;
+        transform: scale(1) translateY(0);
+        filter: blur(0);
+      }
+    }
+
     .animate-fade-in {
       animation: fadeIn 1.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    }
+
+    .animate-modal {
+      animation: modalFade 0.55s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    }
+
+    .modal-scroll::-webkit-scrollbar {
+      display: none;
+    }
+
+    .modal-scroll {
+      -ms-overflow-style: none;
+      scrollbar-width: none;
+    }
+
+    .line-clamp-1 {
+      display: -webkit-box;
+      -webkit-line-clamp: 1;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
     }
   `}</style>
 );

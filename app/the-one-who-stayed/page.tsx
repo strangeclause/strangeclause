@@ -9,10 +9,7 @@ import {
   ExternalLink,
   ArrowLeft,
   Rainbow,
-  CloudSun,
-  Heart,
-  Guitar,
-  Disc3,
+  MessageCircle,
   WandSparkles,
   Loader2,
 } from "lucide-react";
@@ -163,7 +160,7 @@ export default function TheOneWhoStayedPage() {
         size: `${2 + (index % 3)}px`,
         delay: `${(index % 8) * 0.45}s`,
         duration: `${6 + (index % 6)}s`,
-      })),
+       })),
     []
   );
 
@@ -202,12 +199,14 @@ export default function TheOneWhoStayedPage() {
 
   return (
     <main
-      className={`${inter.className} relative min-h-screen overflow-x-hidden bg-[#080914] text-[#c8cde7] font-light text-[13px] antialiased selection:bg-[#ff79b4]/30 selection:text-white`}
+      className={`${inter.className} relative min-h-screen overflow-x-hidden bg-[#080914] text-[#c8cde7] font-light text-[12.5px] antialiased selection:bg-[#ff79b4]/30 selection:text-white`}
     >
+      {/* Background Effects */}
       <div className="pointer-events-none fixed inset-0 z-0 bg-[radial-gradient(circle_at_18%_18%,rgba(244,63,94,0.13),transparent_34%),radial-gradient(circle_at_42%_12%,rgba(251,191,36,0.12),transparent_30%),radial-gradient(circle_at_70%_18%,rgba(52,211,153,0.11),transparent_34%),radial-gradient(circle_at_85%_65%,rgba(96,165,250,0.15),transparent_42%),linear-gradient(180deg,#080914_0%,#111323_52%,#07080f_100%)]" />
       <div className="rainbow-aurora pointer-events-none fixed inset-0 z-[1]" />
-      <div className="rainbow-arc pointer-events-none fixed left-1/2 top-[-130px] z-[2] h-[360px] w-[760px] -translate-x-1/2 rounded-b-full opacity-35 blur-[1px]" />
+      <div className="rainbow-arc pointer-events-none fixed left-1/2 top-[-150px] z-[2] h-[300px] w-[700px] -translate-x-1/2 rounded-b-full opacity-35 blur-[1px]" />
 
+      {/* Floating Sparkles Effect */}
       <div className="pointer-events-none fixed inset-0 z-[3] overflow-hidden">
         {sparkles.map((sparkle, index) => (
           <span
@@ -225,355 +224,303 @@ export default function TheOneWhoStayedPage() {
         ))}
       </div>
 
+      {/* Global Loading Indicator */}
       {loading && (
-        <div className="fixed right-6 top-24 z-[80] flex items-center gap-2 rounded-full border border-white/[0.08] bg-black/40 px-4 py-2 text-[8px] uppercase tracking-[0.2em] text-white/60 backdrop-blur-xl">
-          <Loader2 size={11} className="animate-spin" />
+        <div className="fixed right-4 top-20 z-[80] flex items-center gap-2 rounded-full border border-white/[0.08] bg-black/40 px-3 py-1.5 text-[8px] uppercase tracking-[0.2em] text-white/60 backdrop-blur-xl animate-fade-in">
+          <Loader2 size={10} className="animate-spin" />
           loading
         </div>
       )}
 
-      <nav className="fixed left-0 right-0 top-0 z-[60] border-b border-white/[0.07] bg-[#080914]/70 backdrop-blur-xl">
-        <div className="mx-auto flex max-w-[1500px] items-center justify-between gap-4 px-6 py-5 sm:px-12 md:px-20 lg:px-28 xl:px-36">
+      {/* Navigation */}
+      <nav className="fixed left-0 right-0 top-0 z-[60] border-b border-white/[0.045] bg-[#080914]/72 backdrop-blur-xl">
+        <div className="mx-auto grid max-w-[1500px] grid-cols-[1fr_auto] items-center gap-3 px-5 py-4 sm:px-8 sm:py-5 md:grid-cols-[1fr_auto_1fr] md:px-20 lg:px-28 xl:px-36">
           <button
             onClick={() => router.push("/")}
-            className="group flex shrink-0 items-center gap-2 text-[8.5px] uppercase tracking-[0.22em] text-[#8b90aa] transition-colors duration-700 hover:text-white/85 sm:text-[9px]"
+            className="group hidden shrink-0 items-center gap-2 justify-self-start text-[8.5px] uppercase tracking-[0.22em] text-[#8b90aa] transition-colors duration-700 hover:text-white/85 md:flex md:text-[9px]"
           >
-            <ArrowLeft size={12} strokeWidth={1.5} className="transition-transform duration-700 group-hover:-translate-x-1" />
+            <ArrowLeft size={11} strokeWidth={1.5} className="transition-transform duration-700 group-hover:-translate-x-1" />
             leave
           </button>
 
           <button
             onClick={() => router.push("/")}
-            className="group flex min-w-0 flex-col items-center text-center"
+            className="group col-start-1 row-start-1 flex min-w-0 flex-col items-start justify-self-start text-left md:col-start-2 md:items-center md:justify-self-center md:text-center"
           >
             <span className="text-[10px] font-medium uppercase tracking-[0.24em] text-white/85 sm:text-[11px]">
               {profile.site_title || "strange clause"}
             </span>
-            <span className="hidden max-w-[330px] truncate text-[8px] lowercase tracking-[0.12em] text-[#8b90aa] transition-colors duration-500 group-hover:text-white/60 sm:block">
+            <span className="block max-w-[220px] truncate text-[7px] lowercase tracking-[0.12em] text-[#8b90aa] transition-colors duration-500 group-hover:text-white/60 sm:max-w-[320px] sm:text-[8px]">
               {profile.nav_label}
             </span>
           </button>
 
-          <div className="flex shrink-0 items-center gap-2 rounded-full border border-white/[0.08] bg-white/[0.035] px-3.5 py-2 text-[8px] uppercase tracking-[0.22em] text-[#c7cef5] shadow-[0_10px_35px_rgba(0,0,0,0.35)] sm:px-4 sm:text-[8.5px]">
-            <Rainbow size={11} strokeWidth={1.5} />
+          <div className="col-start-2 row-start-1 flex shrink-0 items-center justify-self-end gap-1.5 rounded-full border border-white/[0.055] bg-white/[0.022] px-3 py-2 text-[8px] uppercase tracking-[0.22em] text-[#c7cef5] shadow-[0_10px_35px_rgba(0,0,0,0.35)] md:col-start-3 sm:text-[8.5px]">
+            <Rainbow size={10} strokeWidth={1.5} />
             {profile.badge_label}
           </div>
         </div>
       </nav>
 
-      <div className="relative z-10 mx-auto max-w-[1500px] px-6 pb-28 pt-36 sm:px-12 md:px-20 md:pt-44 lg:px-28 xl:px-36">
-        <header className="animate-fade-in mb-16 grid grid-cols-1 items-start gap-7 lg:grid-cols-[1.1fr_0.9fr] lg:gap-10">
-          <div className="max-w-2xl space-y-5">
-            <div className="flex items-center gap-2">
-              <CloudSun size={13} className="text-[#fbbf24] stroke-[1.4px]" />
-              <p className="text-[9px] uppercase tracking-[0.24em] text-[#8b90aa]">
-                {profile.page_label}
-              </p>
-            </div>
+      {/* Main Container */}
+      <div className="relative z-10 mx-auto max-w-[1500px] px-5 pb-20 pt-28 sm:px-8 sm:pt-36 md:px-20 md:pt-44 lg:px-28 xl:px-36">
+        {/* Main Hero Card */}
+        <section className="animate-fade-in mb-5 overflow-hidden rounded-[1.8rem] border border-white/[0.07] bg-white/[0.015] p-4 shadow-[0_20px_50px_rgba(0,0,0,0.3)] backdrop-blur-xl sm:p-5">
+          <div className="grid gap-5 lg:grid-cols-[1.1fr_0.9fr]">
+            
+            {/* Left Column (Info & Title) */}
+            <div className="rounded-[1.4rem] border border-white/[0.055] bg-[#080914]/55 p-5 sm:p-6">
+              <div className="mb-4 flex flex-wrap items-center gap-1.5">
+                <span className="rounded-full border border-white/[0.06] bg-white/[0.03] px-3 py-1 text-[7px] uppercase tracking-[0.2em] text-[#d7dcff]/80">
+                  {profile.page_label}
+                </span>
+                <span className="rounded-full border border-white/[0.06] bg-black/30 px-3 py-1 text-[7px] uppercase tracking-[0.2em] text-[#8b90aa]">
+                  {profile.badge_label}
+                </span>
+              </div>
 
-            <h1 className="text-[34px] font-light leading-[1.02] tracking-[-0.07em] text-[#f4f7ff] sm:text-[48px] md:text-[64px]">
-              {profile.person_name}
-              {profile.second_name && (
-                <>
-                  <br />
-                  <span className="bg-gradient-to-r from-[#fb7185] via-[#fbbf24] via-[#34d399] to-[#60a5fa] bg-clip-text font-normal text-transparent">
+              <h1 className="max-w-xl text-[36px] font-light leading-[1] tracking-[-0.05em] text-white sm:text-[48px]">
+                {profile.person_name}
+                {profile.second_name && (
+                  <span className="mt-1 block bg-gradient-to-r from-[#fb7185] via-[#fbbf24] to-[#60a5fa] bg-clip-text text-transparent">
                     {profile.second_name}
                   </span>
-                </>
-              )}
-            </h1>
+                )}
+              </h1>
 
-            <p className="max-w-xl whitespace-pre-line text-[12.5px] leading-relaxed text-[#a4abc9]">
-              {profile.hero_subtitle}
-            </p>
+              <p className="mt-3 text-[7.5px] uppercase tracking-[0.2em] text-[#d7dcff]/75">
+                {profile.profile_label || "stayed profile"}
+              </p>
 
-            <div className="max-w-xl overflow-hidden rounded-[2rem] border border-white/[0.08] bg-white/[0.035] shadow-[0_16px_45px_rgba(0,0,0,0.24)] backdrop-blur-xl">
-              <div className="flex items-center gap-2 border-b border-white/[0.08] px-5 py-4 text-[8px] uppercase tracking-[0.2em] text-[#ffcf8c]">
-                <Rainbow size={12} />
-                {profile.gallery_title}
-              </div>
+              <p className="mt-4 max-w-xl text-[12.5px] leading-relaxed text-[#b3b9d4]/85">
+                {profile.hero_subtitle}
+              </p>
 
-              <div className="custom-horizontal-scroll overflow-x-auto overflow-y-hidden">
-                <div className="flex w-max gap-3 px-4 pb-4 pt-3">
-                  {images.map((image) => (
-                    <div
-                      key={image.id}
-                      className="group relative h-52 w-36 shrink-0 overflow-hidden rounded-[1.7rem] border border-white/[0.08] bg-black/20 transition-all duration-700 hover:-translate-y-1 hover:border-white/15"
-                    >
-                      <img
-                        src={image.image_url}
-                        alt={image.label || "gallery image"}
-                        className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-[1.04]"
-                      />
-                      <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/10 to-transparent" />
-                      <div className="absolute inset-x-0 bottom-0 p-3">
-                        <p className="text-[7px] uppercase tracking-[0.18em] text-white/70">
-                          {image.label}
-                        </p>
-                      </div>
-                    </div>
-                  ))}
+              <section className="mt-6 rounded-[1.4rem] border border-white/[0.06] bg-white/[0.015] p-4">
+                <div className="mb-2.5 flex items-center justify-between border-b border-white/[0.045] pb-2">
+                  <p className="text-[7.5px] uppercase tracking-[0.2em] text-[#d7dcff]/75">
+                    under dim lights
+                  </p>
+                  <Music size={11} className="text-[#fbbf24]" />
                 </div>
+                <p className="text-[11.5px] leading-relaxed text-[#cfd6f4]/82 italic">
+                  "{profile.quote}"
+                </p>
+              </section>
+            </div>
+
+            {/* Right Column (Gallery & Quote) */}
+            <div className="flex flex-col gap-4 justify-between">
+              <section className="overflow-hidden rounded-[1.4rem] border border-white/[0.06] bg-white/[0.015] p-3.5">
+                <div className="mb-3 flex items-center justify-between border-b border-white/[0.045] pb-2">
+                  <p className="text-[7.5px] uppercase tracking-[0.2em] text-[#d7dcff]/75">
+                    {profile.gallery_title}
+                  </p>
+                  <p className="text-[7px] uppercase tracking-[0.16em] text-[#777777]">
+                    {images.length} frames
+                  </p>
+                </div>
+
+                <div className="custom-horizontal-scroll overflow-x-auto overflow-y-hidden">
+                  <div className="flex w-max gap-2.5 pb-1">
+                    {images.map((image) => (
+                      <div
+                        key={image.id}
+                        className="group relative h-44 w-32 shrink-0 overflow-hidden rounded-[1.1rem] border border-white/[0.055] bg-black/30"
+                      >
+                        <img
+                          src={image.image_url}
+                          alt={image.label || "gallery image"}
+                          className="h-full w-full object-cover grayscale-[18%] transition-all duration-700 group-hover:scale-[1.03] group-hover:grayscale-0"
+                        />
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/95 via-black/10 to-transparent" />
+                        {image.label && (
+                          <div className="absolute inset-x-0 bottom-0 p-2">
+                            <p className="truncate text-[7px] uppercase tracking-[0.14em] text-white/75">
+                              {image.label}
+                            </p>
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </section>
+
+              <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                {stats.slice(0, 4).map((stat) => (
+                  <MiniStat key={stat.id} label={stat.label} value={stat.value} />
+                ))}
               </div>
             </div>
 
-            <div className="max-w-xl rounded-[2rem] border border-white/[0.08] bg-white/[0.035] p-4 shadow-[0_16px_45px_rgba(0,0,0,0.24)] backdrop-blur-xl">
-              <div className="mb-3 flex items-center gap-2 text-[8px] uppercase tracking-[0.2em] text-[#ffcf8c]">
-                <ExternalLink size={12} />
-                {profile.socials_title}
+          </div>
+        </section>
+
+        {/* Secondary Widgets Row */}
+        <div className="grid gap-5 lg:grid-cols-[1.05fr_0.95fr]">
+          
+          {/* Left Column (Spotify & Note) */}
+          <div className="space-y-5">
+            <section className="rounded-[1.6rem] border border-white/[0.06] bg-white/[0.015] p-4 shadow-sm backdrop-blur-xl">
+              <div className="mb-3 flex items-center justify-between border-b border-white/[0.045] pb-2">
+                <p className="text-[7.5px] uppercase tracking-[0.2em] text-[#d7dcff]/75">
+                  {profile.spotify_title}
+                </p>
+                <Music size={11} className="text-[#34d399]" />
               </div>
 
-              <div className="grid gap-2 sm:grid-cols-2">
+              {profile.spotify_embed_url ? (
+                <div className="overflow-hidden rounded-[1.1rem] border border-white/[0.055] bg-black/30 p-1">
+                  <iframe
+                    title="spotify embed"
+                    src={profile.spotify_embed_url}
+                    width="100%"
+                    height="80"
+                    allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
+                    loading="lazy"
+                    className="rounded-[0.9rem] border-0 grayscale opacity-70 transition-all duration-500 hover:opacity-100"
+                  />
+                </div>
+              ) : (
+                <div className="flex h-20 items-center justify-center rounded-[1.1rem] border border-dashed border-white/[0.05] bg-black/25 text-[7.5px] uppercase tracking-[0.18em] text-[#666666]">
+                  no music left here
+                </div>
+              )}
+
+              <p className="mt-2 text-center text-[7px] uppercase tracking-[0.16em] text-[#777777]">
+                {profile.spotify_caption}
+              </p>
+            </section>
+
+            <section className="rounded-[1.6rem] border border-white/[0.06] bg-white/[0.015] p-4 backdrop-blur-xl">
+              <div className="mb-3 flex items-center gap-1.5 border-b border-white/[0.045] pb-2">
+                <WandSparkles size={11} className="text-[#fb7185]" />
+                <p className="text-[7.5px] uppercase tracking-[0.2em] text-[#d7dcff]/75">
+                  letter
+                </p>
+              </div>
+              <p className="whitespace-pre-line text-[11px] leading-[1.7] text-[#cfd6f4]/82">
+                {profile.note_body}
+              </p>
+            </section>
+
+            {profile.youtube_embed_url && (
+              <iframe
+                title="youtube embed"
+                src={profile.youtube_embed_url}
+                width="100%"
+                height="220"
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                allowFullScreen
+                loading="lazy"
+                className="aspect-video h-auto w-full rounded-[1.2rem] border-0 opacity-80 grayscale transition-all duration-700 hover:opacity-100 hover:grayscale-0"
+              />
+            )}
+          </div>
+
+          {/* Right Column (Chats, Tags & Socials) */}
+          <div className="space-y-5">
+            <section className="rounded-[1.6rem] border border-white/[0.06] bg-white/[0.015] p-4 backdrop-blur-xl">
+              <div className="mb-3 flex items-center gap-1.5 border-b border-white/[0.045] pb-2">
+                <MessageCircle size={11} className="text-[#60a5fa]" />
+                <p className="text-[7.5px] uppercase tracking-[0.2em] text-[#d7dcff]/75">
+                  {profile.person_name || "someone"}
+                </p>
+              </div>
+
+              <div className="space-y-2">
+                {chats.map((chat) => (
+                  <CuteMessage key={chat.id} side={chat.side} text={chat.text} />
+                ))}
+              </div>
+            </section>
+
+            <section className="rounded-[1.6rem] border border-white/[0.06] bg-white/[0.015] p-4 backdrop-blur-xl">
+              <SectionHeader
+                title={profile.tags_title || "things that stayed"}
+                subtitle={profile.tags_subtitle || "small traces"}
+              />
+              <div className="flex flex-wrap gap-1.5 pt-3">
+                {tags.map((tag) => (
+                  <span
+                    key={tag.id}
+                    className="rounded-full border border-white/[0.055] bg-white/[0.03] px-2.5 py-1 text-[7px] uppercase tracking-[0.14em] text-[#d6dcff]/85"
+                  >
+                    {tag.label}
+                  </span>
+                ))}
+              </div>
+            </section>
+
+            <section className="rounded-[1.6rem] border border-white/[0.06] bg-white/[0.015] p-4 backdrop-blur-xl">
+              <div className="mb-3 flex items-center gap-1.5 border-b border-white/[0.045] pb-2">
+                <ExternalLink size={11} className="text-[#fbbf24]" />
+                <p className="text-[7.5px] uppercase tracking-[0.2em] text-[#d7dcff]/75">
+                  {profile.socials_title}
+                </p>
+              </div>
+
+              <div className="grid gap-1.5 sm:grid-cols-2">
                 {links.map((link) => (
                   <a
                     key={link.id}
                     href={link.href}
                     target="_blank"
                     rel="noreferrer"
-                    className="group/link flex items-center justify-between rounded-2xl border border-white/[0.08] bg-black/20 px-3.5 py-3 text-[8px] uppercase tracking-[0.16em] text-[#c9d4ff] transition-all duration-500 hover:-translate-y-0.5 hover:border-white/18 hover:bg-white/[0.06] hover:text-white"
+                    className="flex items-center justify-between rounded-lg border border-white/[0.05] bg-black/20 px-3 py-2 text-[7.5px] uppercase tracking-[0.14em] text-[#d6dcff]/85 transition-all duration-500 hover:border-white/12 hover:bg-white/[0.04]"
                   >
                     <span>{link.label}</span>
-                    <ExternalLink size={10} className="transition-transform duration-500 group-hover/link:-translate-y-0.5 group-hover/link:translate-x-0.5" />
+                    <ExternalLink size={8} className="opacity-60" />
                   </a>
                 ))}
               </div>
-            </div>
-          </div>
-
-          <aside className="group relative overflow-hidden rounded-3xl border border-white/[0.08] bg-white/[0.035] p-4 shadow-[0_22px_70px_rgba(0,0,0,0.45)] backdrop-blur-xl transition-all duration-700 hover:-translate-y-0.5 hover:border-white/15 sm:p-5">
-            <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_20%_15%,rgba(251,113,133,0.18),transparent_28%),radial-gradient(circle_at_80%_20%,rgba(52,211,153,0.16),transparent_30%),radial-gradient(circle_at_50%_90%,rgba(96,165,250,0.16),transparent_35%)]" />
-
-            <div className="relative z-10 border-b border-white/[0.07] pb-4">
-              <div className="flex items-center justify-between gap-4">
-                <div>
-                  <p className="text-[8px] uppercase tracking-[0.22em] text-[#9ea6c8]">
-                    {profile.profile_label}
-                  </p>
-                  <p className="mt-2 text-[16px] font-light tracking-[-0.04em] text-white/90 sm:text-[20px]">
-                    {profile.profile_title}
-                  </p>
-                </div>
-                <Disc3 className="animate-spin-slow text-[#fbbf24]" size={22} />
-              </div>
-            </div>
-
-            <div className="relative z-10 mt-5 grid gap-3 sm:grid-cols-2">
-              {stats.map((stat) => (
-                <MiniStat key={stat.id} label={stat.label} value={stat.value} />
-              ))}
-            </div>
-
-            <div className="relative z-10 mt-5 rounded-2xl border border-white/[0.07] bg-black/20 p-4">
-              <p className="whitespace-pre-line text-[11px] italic leading-relaxed text-[#d6dcff]">
-                "{profile.quote}"
-              </p>
-            </div>
-
-            <div className="relative z-10 mt-4 rounded-[1.7rem] border border-white/[0.08] bg-white/[0.04] p-4">
-              <div className="space-y-2">
-                {chats.map((chat) => (
-                  <CuteMessage key={chat.id} side={chat.side} text={chat.text} />
-                ))}
-              </div>
-            </div>
-          </aside>
-        </header>
-
-        <div className="grid grid-cols-1 gap-10 lg:grid-cols-12 lg:gap-12">
-          <aside className="h-fit space-y-5 lg:sticky lg:top-32 lg:col-span-4">
-            <div className="relative overflow-hidden rounded-3xl border border-white/[0.08] bg-[linear-gradient(135deg,rgba(251,113,133,0.055),rgba(251,191,36,0.04),rgba(52,211,153,0.045),rgba(96,165,250,0.06))] p-4 shadow-[0_25px_70px_rgba(0,0,0,0.42)] backdrop-blur-xl">
-              <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_12%_12%,rgba(251,191,36,0.12),transparent_32%),radial-gradient(circle_at_90%_80%,rgba(96,165,250,0.12),transparent_38%)]" />
-
-              <div className="relative z-10 mb-4 flex items-center justify-between">
-                <p className="text-[8px] uppercase tracking-[0.22em] text-[#c7cef5]">
-                  {profile.spotify_title}
-                </p>
-                <Music size={14} className="text-[#34d399]" />
-              </div>
-
-              {profile.spotify_embed_url ? (
-                <div className="relative z-10 overflow-hidden rounded-[1.9rem] border border-white/[0.08] bg-[linear-gradient(135deg,rgba(251,113,133,0.08),rgba(251,191,36,0.06),rgba(52,211,153,0.06),rgba(96,165,250,0.08))] p-1.5 shadow-[0_18px_50px_rgba(0,0,0,0.32)]">
-                  <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(251,191,36,0.13),transparent_34%),radial-gradient(circle_at_bottom_right,rgba(96,165,250,0.14),transparent_36%),linear-gradient(180deg,rgba(8,9,20,0.2),rgba(8,9,20,0.5))]" />
-
-                  <iframe
-                    title="Spotify embed"
-                    src={profile.spotify_embed_url}
-                    width="100%"
-                    height="352"
-                    allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
-                    loading="lazy"
-                    className="relative z-10 rounded-[1.6rem] border-0 grayscale opacity-55 mix-blend-luminosity transition-all duration-700 hover:opacity-82"
-                  />
-                </div>
-              ) : (
-                <div className="relative z-10 flex min-h-[110px] items-center justify-center rounded-2xl border border-dashed border-white/[0.08] bg-[#080914]/35 text-[8px] uppercase tracking-[0.2em] text-[#8b90aa]">
-                  nothing is coming out of the speakers
-                </div>
-              )}
-
-              <p className="relative z-10 mt-4 text-center text-[8px] uppercase tracking-[0.18em] text-[#8b90aa]">
-                {profile.spotify_caption}
-              </p>
-            </div>
-
-            <div className="rounded-3xl border border-white/[0.08] bg-white/[0.03] p-5 backdrop-blur-xl">
-              <div className="mb-3 flex items-center gap-2 text-[8px] uppercase tracking-[0.2em] text-[#ff9ebd]">
-                <WandSparkles size={13} />
-                {profile.note_title}
-              </div>
-
-              <div className="rounded-[1.8rem] border border-white/[0.08] bg-black/20 p-4">
-                <p className="whitespace-pre-line text-[11px] leading-[1.9] text-[#cfd6f4]">
-                  {profile.note_body}
-                </p>
-              </div>
-            </div>
-          </aside>
-
-          <div className="space-y-12 lg:col-span-8">
-            <section>
-              <SectionHeader
-                title={profile.tags_title || "things that stayed"}
-                subtitle={profile.tags_subtitle || "small traces"}
-              />
-
-              <div className="rounded-[2.2rem] border border-white/[0.08] bg-white/[0.035] p-5 shadow-[0_18px_60px_rgba(0,0,0,0.28)] backdrop-blur-xl">
-                <div className="flex flex-wrap gap-2">
-                  {tags.map((tag) => (
-                    <span
-                      key={tag.id}
-                      className="rounded-full border border-white/[0.08] bg-white/[0.04] px-3 py-1.5 text-[8px] uppercase tracking-[0.14em] text-[#d6dcff] transition-all duration-300 hover:border-white/15 hover:bg-white/[0.07] hover:text-white"
-                    >
-                      {tag.label}
-                    </span>
-                  ))}
-                </div>
-              </div>
-            </section>
-
-            <section>
-              <div className="relative overflow-hidden rounded-3xl border border-white/[0.08] bg-[linear-gradient(135deg,rgba(251,113,133,0.06),rgba(251,191,36,0.045),rgba(52,211,153,0.05),rgba(96,165,250,0.06))] p-8 shadow-[0_20px_55px_rgba(0,0,0,0.38)] backdrop-blur-xl">
-                <div className="absolute inset-0 opacity-35 bg-gradient-to-r from-rose-500/35 via-yellow-400/25 via-emerald-400/25 to-blue-500/35 blur-2xl" />
-
-                <div className="relative z-10">
-                  <div className="mb-6 flex justify-center gap-6">
-                    <Heart size={15} className="text-[#fb7185] opacity-90 animate-float" />
-                    <Guitar size={15} className="text-[#34d399] opacity-90 animate-float-delay" />
-                    <Sparkles size={15} className="text-[#fbbf24] opacity-90 animate-float" />
-                  </div>
-
-                  {profile.youtube_embed_url ? (
-                    <div className="relative overflow-hidden rounded-[2rem] border border-white/[0.08] bg-[#080914]/45 p-1 shadow-[0_18px_55px_rgba(0,0,0,0.28)]">
-                      <iframe
-                        className="aspect-video h-full min-h-[170px] w-full rounded-[1.85rem] border-0 grayscale-[0.08] opacity-90 transition-all duration-700 hover:opacity-100"
-                        src={profile.youtube_embed_url}
-                        title="YouTube video"
-                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                        allowFullScreen
-                      />
-
-                      <div className="pointer-events-none absolute inset-1 rounded-[1.85rem] bg-[linear-gradient(to_top,rgba(8,9,20,0.88),transparent_46%)]" />
-
-                      <div className="pointer-events-none absolute inset-x-0 bottom-0 flex items-center justify-between px-5 pb-5">
-                        <span className="rounded-full border border-white/[0.08] bg-[#080914]/55 px-3 py-1 text-[7px] uppercase tracking-[0.18em] text-white/75 backdrop-blur-xl">
-                          {profile.youtube_badge}
-                        </span>
-                        <Music size={13} className="text-[#fbbf24]" />
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="flex h-60 items-center justify-center rounded-[2rem] border border-dashed border-white/[0.08] bg-[#080914]/35 text-[9px] uppercase tracking-[0.2em] text-[#8b90aa]">
-                      no youtube video
-                    </div>
-                  )}
-                </div>
-              </div>
             </section>
           </div>
+
         </div>
       </div>
 
-      <footer className="relative z-10 border-t border-white/[0.07] bg-[#07080c]/85 px-8 py-12 text-center backdrop-blur-xl">
-        <p className="mx-auto max-w-xl whitespace-pre-line text-[11px] leading-relaxed tracking-[0.12em] text-[#8b90aa]">
+      {/* Footer Area */}
+      <footer className="relative z-10 border-t border-white/[0.06] bg-[#07080c]/80 px-4 py-8 text-center backdrop-blur-md">
+        <p className="mx-auto max-w-xl whitespace-pre-line text-[9.5px] leading-relaxed tracking-[0.12em] text-[#8b90aa]/80">
           {profile.footer_text}
         </p>
       </footer>
 
+      {/* Embedded Optimization Styles */}
       <style jsx global>{`
         html,
         body {
           scroll-behavior: smooth;
           background: #080914;
-
           scrollbar-width: thin;
-          scrollbar-color: rgba(180, 196, 255, 0.16)
-            rgba(255, 255, 255, 0.025);
+          scrollbar-color: rgba(180, 196, 255, 0.16) rgba(255, 255, 255, 0.025);
         }
 
         html::-webkit-scrollbar,
         body::-webkit-scrollbar {
-          width: 8px;
-          height: 8px;
+          width: 4px;
+          height: 4px;
         }
 
         html::-webkit-scrollbar-track,
         body::-webkit-scrollbar-track {
-          background:
-            linear-gradient(
-              180deg,
-              rgba(17, 19, 35, 0.92),
-              rgba(8, 9, 20, 0.96)
-            );
+          background: #080914;
         }
 
         html::-webkit-scrollbar-thumb,
         body::-webkit-scrollbar-thumb {
           border-radius: 999px;
-
-          background:
-            linear-gradient(
-              180deg,
-              rgba(255, 145, 179, 0.28),
-              rgba(255, 214, 102, 0.24),
-              rgba(120, 255, 206, 0.24),
-              rgba(140, 184, 255, 0.28)
-            );
-
-          border: 2px solid #080914;
-
-          box-shadow:
-            0 0 12px rgba(255, 145, 179, 0.08),
-            0 0 18px rgba(120, 255, 206, 0.05);
-
-          transition:
-            background 500ms ease,
-            box-shadow 500ms ease,
-            opacity 500ms ease;
-        }
-
-        html::-webkit-scrollbar-thumb:hover,
-        body::-webkit-scrollbar-thumb:hover {
-          background:
-            linear-gradient(
-              180deg,
-              rgba(255, 145, 179, 0.4),
-              rgba(255, 214, 102, 0.34),
-              rgba(120, 255, 206, 0.34),
-              rgba(140, 184, 255, 0.4)
-            );
-
-          box-shadow:
-            0 0 16px rgba(255, 145, 179, 0.12),
-            0 0 22px rgba(120, 255, 206, 0.08);
+          background: rgba(255, 255, 255, 0.1);
         }
 
         @keyframes fadeIn {
           from {
             opacity: 0;
             transform: translateY(8px);
-            filter: blur(3px);
+            filter: blur(4px);
           }
-
           to {
             opacity: 1;
             transform: translateY(0);
@@ -586,40 +533,36 @@ export default function TheOneWhoStayedPage() {
         }
 
         @keyframes auroraMove {
-          0%,
-          100% {
-            transform: translate3d(-2%, -1%, 0) scale(1);
-            filter: hue-rotate(0deg) blur(70px);
-            opacity: 0.45;
+          0%, 100% {
+            transform: translate3d(-1%, -1%, 0) scale(1);
+            filter: blur(55px);
+            opacity: 0.35;
           }
-
           50% {
-            transform: translate3d(2%, 2%, 0) scale(1.08);
-            filter: hue-rotate(55deg) blur(90px);
-            opacity: 0.65;
+            transform: translate3d(1%, 1%, 0) scale(1.02);
+            filter: blur(65px);
+            opacity: 0.45;
           }
         }
 
         .rainbow-aurora {
           background:
-            radial-gradient(circle at 18% 22%, rgba(251, 113, 133, 0.22), transparent 34%),
-            radial-gradient(circle at 40% 16%, rgba(251, 191, 36, 0.18), transparent 30%),
-            radial-gradient(circle at 66% 18%, rgba(52, 211, 153, 0.18), transparent 34%),
-            radial-gradient(circle at 82% 58%, rgba(96, 165, 250, 0.2), transparent 38%);
-          animation: auroraMove 12s ease-in-out infinite;
+            radial-gradient(circle at 15% 20%, rgba(251, 113, 133, 0.14), transparent 40%),
+            radial-gradient(circle at 45% 15%, rgba(251, 191, 36, 0.1), transparent 35%),
+            radial-gradient(circle at 75% 25%, rgba(52, 211, 153, 0.1), transparent 40%);
+          animation: auroraMove 16s ease-in-out infinite;
+          will-change: transform, opacity;
         }
 
         .rainbow-arc {
           background:
             radial-gradient(
               ellipse at center,
-              transparent 34%,
-              rgba(251, 113, 133, 0.22) 36%,
-              rgba(251, 191, 36, 0.2) 42%,
-              rgba(52, 211, 153, 0.18) 48%,
-              rgba(96, 165, 250, 0.18) 54%,
-              rgba(167, 139, 250, 0.16) 60%,
-              transparent 66%
+              transparent 38%,
+              rgba(251, 113, 133, 0.13) 40%,
+              rgba(251, 191, 36, 0.11) 44%,
+              rgba(52, 211, 153, 0.09) 48%,
+              transparent 54%
             );
         }
 
@@ -628,59 +571,28 @@ export default function TheOneWhoStayedPage() {
             transform: translateY(0) scale(0.8);
             opacity: 0;
           }
-
-          20% {
-            opacity: 0.6;
-          }
-
-          70% {
-            opacity: 0.35;
-          }
-
+          15% { opacity: 0.4; }
+          85% { opacity: 0.15; }
           100% {
-            transform: translateY(-48px) scale(1.2);
+            transform: translateY(-30px) scale(1.1);
             opacity: 0;
           }
         }
 
         .floating-spark {
           animation: floatingSpark linear infinite;
-        }
-
-        @keyframes floatSoft {
-          0%,
-          100% {
-            transform: translateY(0);
-          }
-
-          50% {
-            transform: translateY(-6px);
-          }
-        }
-
-        .animate-float {
-          animation: floatSoft 3s ease-in-out infinite;
-        }
-
-        .animate-float-delay {
-          animation: floatSoft 3.4s ease-in-out infinite;
-          animation-delay: 0.8s;
-        }
-
-        .animate-spin-slow {
-          animation: spin 9s linear infinite;
+          will-change: transform, opacity;
         }
 
         .custom-horizontal-scroll {
           scrollbar-width: none;
           -ms-overflow-style: none;
           scroll-behavior: smooth;
-
           mask-image: linear-gradient(
             to right,
             transparent 0%,
-            black 5%,
-            black 95%,
+            black 3%,
+            black 97%,
             transparent 100%
           );
         }
@@ -700,14 +612,14 @@ const SectionHeader = ({
   title: string;
   subtitle: string;
 }) => (
-  <div className="mb-6 flex items-end justify-between gap-4 border-b border-white/[0.07] pb-3">
-    <div className="flex items-center gap-2">
-      <Sparkles size={12} className="text-[#34d399]" />
-      <h3 className="text-[12px] font-light tracking-wide text-[#f4f7ff]">
+  <div className="flex items-end justify-between gap-4 border-b border-white/[0.05] pb-2">
+    <div className="flex items-center gap-1.5">
+      <Sparkles size={11} className="text-[#34d399]" />
+      <h3 className="text-[7.5px] uppercase tracking-[0.2em] text-[#d7dcff]/75">
         {title}
       </h3>
     </div>
-    <p className="text-[8px] uppercase tracking-[0.2em] text-[#8b90aa]">
+    <p className="text-[7px] uppercase tracking-[0.2em] text-[#8b90aa]/70">
       {subtitle}
     </p>
   </div>
@@ -722,10 +634,10 @@ const CuteMessage = ({
 }) => (
   <div className={`flex ${side === "right" ? "justify-end" : "justify-start"}`}>
     <div
-      className={`max-w-[82%] rounded-2xl px-3.5 py-2 text-[10.5px] leading-relaxed ${
+      className={`max-w-[85%] rounded-lg px-2.5 py-1.5 text-[10px] leading-relaxed shadow-sm ${
         side === "right"
-          ? "rounded-br-sm bg-[#fb7185]/15 text-[#ffd5df]"
-          : "rounded-bl-sm bg-[#60a5fa]/15 text-[#d6e7ff]"
+          ? "bg-[#fb7185]/10 text-[#ffd5df] border border-[#fb7185]/05"
+          : "bg-[#60a5fa]/10 text-[#d6e7ff] border border-[#60a5fa]/05"
       }`}
     >
       {text}
@@ -734,10 +646,13 @@ const CuteMessage = ({
 );
 
 const MiniStat = ({ label, value }: { label: string; value: string }) => (
-  <div className="rounded-2xl border border-white/[0.07] bg-black/20 p-3">
-    <p className="mb-1 text-[7px] uppercase tracking-[0.18em] text-[#8b90aa]">
+  <div className="flex min-h-[42px] w-full items-center gap-3 rounded-full border border-white/[0.055] bg-white/[0.025] px-4 py-2.5 transition-all duration-500 hover:border-white/[0.12] hover:bg-white/[0.04]">
+    <span className="shrink-0 text-[6.5px] uppercase tracking-[0.18em] text-[#8b90aa]/72">
       {label}
-    </p>
-    <p className="text-[10.5px] leading-relaxed text-[#d6dcff]">{value}</p>
+    </span>
+
+    <span className="min-w-0 flex-1 break-words text-[10.5px] leading-relaxed text-[#edf2ff]/92">
+      {value}
+    </span>
   </div>
 );

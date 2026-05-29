@@ -114,6 +114,11 @@ export default function AdminPage() {
         route: "/admin/the-room-owner",
         sub: "keep a person inside one quiet little page.",
       },
+      {
+        label: "shared worlds",
+        route: "/admin/shared-worlds",
+        sub: "keeping my friends.",
+      },
     ],
     []
   );
@@ -171,11 +176,11 @@ export default function AdminPage() {
               </div>
 
               <h1 className="text-[26px] font-light leading-tight tracking-[-0.05em] text-white/90">
-                inner sanctum
+                locked room
               </h1>
 
               <p className="mx-auto max-w-xs text-[11px] leading-relaxed text-[#777777]">
-                Only the maker can open this room. Enter quietly.
+                this place only opens for the person who keeps the shelves alive.
               </p>
             </div>
 
@@ -183,7 +188,7 @@ export default function AdminPage() {
               <input
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                placeholder="identity"
+                placeholder="email left in the dark"
                 className="w-full border-b border-white/[0.08] bg-transparent py-2.5 text-[12px] text-white outline-none transition-colors placeholder:text-[#666666] focus:border-white/30"
               />
 
@@ -191,7 +196,7 @@ export default function AdminPage() {
                 type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                placeholder="keyphrase"
+                placeholder="the quiet password"
                 className="w-full border-b border-white/[0.08] bg-transparent py-2.5 text-[12px] text-white outline-none transition-colors placeholder:text-[#666666] focus:border-white/30"
               />
             </div>
@@ -201,7 +206,7 @@ export default function AdminPage() {
               disabled={!email.trim() || !password.trim()}
               className="group flex w-full items-center justify-center gap-2 rounded-full border border-white/[0.055] bg-white/[0.025] px-4 py-3 text-[8px] uppercase tracking-[0.22em] text-[#9a9a9a] shadow-[0_10px_30px_rgba(0,0,0,0.4)] transition-all duration-700 hover:-translate-y-0.5 hover:border-white/15 hover:bg-white/[0.045] hover:text-white disabled:cursor-not-allowed disabled:opacity-20"
             >
-              verify existence
+              enter the room
             </button>
           </div>
         </div>
@@ -223,14 +228,14 @@ export default function AdminPage() {
           <EyeOff size={20} strokeWidth={1.5} className="mb-6 text-[#777777]" />
 
           <p className="text-[9px] uppercase tracking-[0.22em] text-[#777777]">
-            stranger detected
+            this room does not remember you
           </p>
 
           <button
             onClick={logout}
             className="mt-8 rounded-full border border-white/[0.055] bg-white/[0.025] px-4 py-2 text-[8px] uppercase tracking-[0.22em] text-[#9a9a9a] transition-all duration-700 hover:-translate-y-0.5 hover:border-white/15 hover:bg-white/[0.045] hover:text-white"
           >
-            leave at once
+            leave quietly
           </button>
         </div>
 
@@ -247,22 +252,22 @@ export default function AdminPage() {
       <Background rainDrops={rainDrops} />
 
       <nav className="fixed left-0 right-0 top-0 z-[60] border-b border-white/[0.045] bg-[#020202]/72 backdrop-blur-xl">
-        <div className="mx-auto flex max-w-[1500px] items-center justify-between gap-4 px-6 py-5 sm:px-12 md:px-20 lg:px-28 xl:px-36">
+        <div className="mx-auto grid max-w-[1500px] grid-cols-[1fr_auto] items-center gap-3 px-5 py-4 sm:px-8 sm:py-5 md:grid-cols-[1fr_auto_1fr] md:px-20 lg:px-28 xl:px-36">
           <button
             onClick={() => router.push("/")}
-            className="group flex min-w-0 flex-col items-start"
+            className="group col-start-1 row-start-1 flex min-w-0 flex-col items-start justify-self-start text-left md:col-start-2 md:items-center md:justify-self-center md:text-center"
           >
             <p className="text-[10px] font-medium uppercase tracking-[0.24em] text-white/80 sm:text-[11px]">
               strange clause
             </p>
-            <p className="hidden max-w-[260px] truncate text-[8px] lowercase tracking-[0.12em] text-[#666666] transition-colors duration-500 group-hover:text-white/60 sm:block">
-              admin rooms kept behind rainy glass
+            <p className="block max-w-[220px] truncate text-[7px] lowercase tracking-[0.12em] text-[#666666] transition-colors duration-500 group-hover:text-white/60 sm:max-w-[260px] sm:text-[8px]">
+              rooms where the quiet things are rearranged
             </p>
           </button>
 
           <button
             onClick={logout}
-            className="group flex shrink-0 items-center gap-2 rounded-full border border-white/[0.045] bg-white/[0.016] px-3.5 py-2 text-[8px] uppercase tracking-[0.22em] text-[#777777] shadow-[0_10px_30px_rgba(0,0,0,0.45)] transition-all duration-700 hover:-translate-y-0.5 hover:border-white/10 hover:bg-white/[0.03] hover:text-white/75 sm:px-4 sm:text-[8.5px]"
+            className="group col-start-2 row-start-1 flex shrink-0 items-center justify-self-end gap-2 rounded-full border border-white/[0.045] bg-white/[0.016] px-3 py-2 text-[8px] uppercase tracking-[0.22em] text-[#777777] shadow-[0_10px_30px_rgba(0,0,0,0.45)] transition-all duration-700 hover:-translate-y-0.5 hover:border-white/10 hover:bg-white/[0.03] hover:text-white/75 sm:px-4 sm:text-[8.5px] md:col-start-3"
           >
             <LogOut
               size={12}
@@ -280,45 +285,43 @@ export default function AdminPage() {
             <div className="flex items-center gap-2">
               <CloudRain size={12} className="text-[#666666] stroke-[1.4px]" />
               <p className="text-[9px] uppercase tracking-[0.24em] text-[#666666]">
-                private collection
+                behind the locked shelves
               </p>
             </div>
 
             <h1 className="max-w-2xl text-[30px] font-light leading-[1.08] tracking-[-0.06em] text-white/90 md:text-[42px]">
-              tending to
+              keeping
               <br />
-              the fragments.
+              the quiet rooms alive.
             </h1>
 
             <p className="max-w-lg text-[12.5px] leading-relaxed text-[#8f8f8f]">
-              This is where the quiet things are edited, erased, archived, and
-              kept breathing.
+              small pages, unfinished feelings, old shelves, and rainy little archives are kept here.
             </p>
 
             <div className="flex items-center gap-2 text-[11px] italic text-[#777777]">
               <ShieldQuestion size={12} strokeWidth={1.5} />
-              <span>some ghosts need maintenance.</span>
+              <span>even quiet places need someone watching over them.</span>
             </div>
           </div>
 
           <aside className="rounded-3xl border border-white/[0.045] bg-white/[0.012] p-5 shadow-[0_18px_55px_rgba(0,0,0,0.5)] backdrop-blur-xl">
             <div className="mb-3 flex items-center justify-between border-b border-white/[0.045] pb-3">
               <p className="text-[8px] uppercase tracking-[0.22em] text-[#777777]">
-                logged as
+                currently inside
               </p>
               <Lock size={12} strokeWidth={1.5} className="text-[#666666]" />
             </div>
 
             <p className="truncate text-[13px] text-white/80">{user.email}</p>
             <p className="mt-3 text-[11px] leading-relaxed text-[#777777]">
-              The archive is open. Keep every shelf small, clean, and easy to
-              find again.
+              keep the rooms soft, organized, and easy to come back to later.
             </p>
           </aside>
         </header>
 
         <section>
-          <ShelfHeader title="archive rooms" count={`${rooms.length} rooms`} />
+          <ShelfHeader title="quiet rooms" count={`${rooms.length} rooms`} />
 
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
             {rooms.map((item) => (

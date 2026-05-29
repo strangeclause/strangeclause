@@ -47,10 +47,10 @@ export default function SaySomething() {
   const noteCount = useMemo(() => message.trim().length, [message]);
 
   useEffect(() => {
-    const drops = Array.from({ length: 20 }).map(() => ({
+    const drops = Array.from({ length: 12 }).map(() => ({
       left: `${Math.random() * 100}%`,
       delay: `${Math.random() * 6}s`,
-      duration: `${1.4 + Math.random() * 1.8}s`,
+      duration: `${2.2 + Math.random() * 2.4}s`,
     }));
 
     setRainDrops(drops);
@@ -87,11 +87,11 @@ export default function SaySomething() {
 
       <div className="pointer-events-none fixed inset-0 z-[1] bg-[linear-gradient(90deg,rgba(0,0,0,0.48)_0%,transparent_18%,transparent_82%,rgba(0,0,0,0.48)_100%)]" />
 
-      <div className="rain-container pointer-events-none fixed inset-0 z-10 overflow-hidden opacity-[0.22]">
+      <div className="rain-container pointer-events-none fixed inset-0 z-10 overflow-hidden opacity-[0.14]">
         {rainDrops.map((drop, index) => (
           <div
             key={index}
-            className="drop absolute bg-gradient-to-b from-transparent to-white/30"
+            className="drop absolute bg-gradient-to-b from-transparent to-white/[0.24]"
             style={{
               left: drop.left,
               animationDelay: drop.delay,
@@ -105,10 +105,10 @@ export default function SaySomething() {
       <div className="pointer-events-none fixed bottom-0 right-[12%] z-[2] h-px w-[24%] bg-gradient-to-r from-transparent via-white/5 to-transparent" />
 
       <nav className="fixed left-0 right-0 top-0 z-[60] border-b border-white/[0.045] bg-[#020202]/72 backdrop-blur-xl">
-        <div className="mx-auto flex max-w-[1500px] items-center justify-between gap-4 px-6 py-5 sm:px-12 md:px-20 lg:px-28 xl:px-36">
+        <div className="mx-auto grid max-w-[1500px] grid-cols-[1fr_auto] items-center gap-3 px-5 py-4 sm:px-8 sm:py-5 md:grid-cols-[1fr_auto_1fr] md:px-20 lg:px-28 xl:px-36">
           <button
             onClick={() => router.push("/")}
-            className="group flex shrink-0 items-center gap-2 text-[8.5px] uppercase tracking-[0.22em] text-[#666666] transition-colors duration-700 hover:text-white/80 sm:text-[9px]"
+            className="group hidden shrink-0 items-center gap-2 justify-self-start text-[8.5px] uppercase tracking-[0.22em] text-[#666666] transition-colors duration-700 hover:text-white/80 md:flex md:text-[9px]"
           >
             <ArrowLeft
               size={12}
@@ -120,18 +120,18 @@ export default function SaySomething() {
 
           <button
             onClick={() => router.push("/")}
-            className="group flex min-w-0 flex-col items-center text-center"
+            className="group col-start-1 row-start-1 flex min-w-0 flex-col items-start justify-self-start text-left md:col-start-2 md:items-center md:justify-self-center md:text-center"
           >
             <span className="text-[10px] font-medium uppercase tracking-[0.24em] text-white/80 sm:text-[11px]">
               strange clause
             </span>
 
-            <span className="hidden max-w-[300px] truncate text-[8px] lowercase tracking-[0.12em] text-[#666666] transition-colors duration-500 group-hover:text-white/60 sm:block">
+            <span className="block max-w-[260px] text-[7px] lowercase tracking-[0.12em] text-[#666666] transition-colors duration-500 group-hover:text-white/60 sm:max-w-[300px] sm:text-[8px]">
               don’t forget to bring an umbrella
             </span>
           </button>
 
-          <div className="flex shrink-0 items-center gap-2 rounded-full border border-white/[0.045] bg-white/[0.016] px-3.5 py-2 text-[8px] uppercase tracking-[0.22em] text-[#777777] shadow-[0_10px_30px_rgba(0,0,0,0.45)] sm:px-4 sm:text-[8.5px]">
+          <div className="col-start-2 row-start-1 flex shrink-0 items-center justify-self-end gap-2 rounded-full border border-white/[0.045] bg-white/[0.016] px-3 py-2 text-[8px] uppercase tracking-[0.22em] text-[#777777] shadow-[0_10px_30px_rgba(0,0,0,0.45)] sm:px-4 sm:text-[8.5px] md:col-start-3">
             <Mail size={11} strokeWidth={1.5} />
             note
           </div>
@@ -140,9 +140,9 @@ export default function SaySomething() {
 
       <section className="relative z-20 mx-auto flex min-h-screen max-w-[1500px] items-center px-6 pb-24 pt-36 sm:px-12 md:px-20 md:pt-44 lg:px-28 xl:px-36">
         {!isSent ? (
-          <div className="grid w-full grid-cols-1 items-center gap-6 lg:grid-cols-[0.82fr_1.18fr] lg:gap-8 xl:gap-10">
-            <aside className="group h-fit rounded-3xl border border-white/[0.045] bg-white/[0.012] p-5 shadow-[0_18px_55px_rgba(0,0,0,0.5)] backdrop-blur-xl transition-all duration-700 hover:-translate-y-0.5 hover:border-white/10 hover:bg-white/[0.026] sm:p-6 lg:max-w-[430px]">
-              <div className="pointer-events-none mx-auto mb-5 h-px w-[72%] bg-gradient-to-r from-transparent via-white/10 to-transparent opacity-0 transition-opacity duration-700 group-hover:opacity-100" />
+          <div className="grid w-full grid-cols-1 items-center gap-6 lg:grid-cols-[380px_minmax(0,1fr)] lg:gap-9 xl:gap-12">
+            <aside className="group relative h-fit overflow-hidden rounded-3xl border border-white/[0.045] bg-white/[0.012] p-5 shadow-[0_18px_55px_rgba(0,0,0,0.5)] backdrop-blur-xl transition-all duration-700 hover:border-white/[0.08] hover:bg-white/[0.018] sm:p-6 lg:max-w-[380px]">
+              <div className="pointer-events-none absolute left-10 right-10 top-0 h-px bg-gradient-to-r from-transparent via-white/[0.12] to-transparent opacity-70" />
 
               <div className="mb-5 flex items-center gap-2">
                 <CloudRain size={12} className="text-[#666666] stroke-[1.4px]" />
@@ -158,32 +158,19 @@ export default function SaySomething() {
               </h1>
 
               <p className="mt-5 max-w-sm text-[12.5px] leading-relaxed text-[#888888]">
-                Leave a small message inside the rain. It does not need to be
-                brave, polished, or easy to understand.
+                Leave a small message inside the rain. It does not need to sound
+                brave, finished, or easy for anyone else to read.
               </p>
-
-              <div className="mt-6 flex flex-wrap gap-2 border-t border-white/[0.045] pt-5">
-                {["anonymous", "softly saved", "no answer needed"].map(
-                  (item) => (
-                    <span
-                      key={item}
-                      className="rounded-full border border-white/[0.055] bg-white/[0.025] px-3 py-1 text-[7px] uppercase tracking-[0.18em] text-[#777777]"
-                    >
-                      {item}
-                    </span>
-                  )
-                )}
-              </div>
 
               <div className="mt-5 flex items-center gap-2 text-[11px] italic text-[#777777]">
                 <Ghost size={12} strokeWidth={1.5} />
-                <span>the note can stay even after you leave.</span>
+                <span>the note can stay after the room goes quiet.</span>
               </div>
             </aside>
 
             <div className="flex w-full items-center">
-              <div className="group relative w-full overflow-hidden rounded-3xl border border-white/[0.045] bg-white/[0.012] p-5 shadow-[0_16px_45px_rgba(0,0,0,0.5)] backdrop-blur-xl transition-all duration-700 ease-out hover:-translate-y-0.5 hover:border-white/10 hover:bg-white/[0.026] sm:p-6 md:p-7">
-                <div className="pointer-events-none absolute inset-x-7 top-0 h-px bg-gradient-to-r from-transparent via-white/10 to-transparent opacity-0 transition-opacity duration-700 group-hover:opacity-100" />
+              <div className="group relative w-full overflow-hidden rounded-3xl border border-white/[0.045] bg-white/[0.012] p-5 shadow-[0_16px_45px_rgba(0,0,0,0.5)] backdrop-blur-xl transition-all duration-700 ease-out hover:border-white/[0.08] hover:bg-white/[0.018] sm:p-6 md:p-7">
+                <div className="pointer-events-none absolute left-10 right-10 top-0 h-px bg-gradient-to-r from-transparent via-white/[0.12] to-transparent opacity-70" />
 
                 <div className="mb-4 flex items-center justify-between gap-3 border-b border-white/[0.045] pb-3">
                   <div className="flex items-center gap-2">
@@ -197,7 +184,7 @@ export default function SaySomething() {
                     </p>
                   </div>
 
-                  <p className="text-[7px] uppercase tracking-[0.2em] text-[#555555]">
+                  <p className="text-[8px] uppercase tracking-[0.2em] text-[#555555]">
                     {noteCount} characters
                   </p>
                 </div>
@@ -205,13 +192,13 @@ export default function SaySomething() {
                 <textarea
                   value={message}
                   onChange={(event) => setMessage(event.target.value)}
-                  placeholder="say what you need to say..."
-                  className="scrollbar-hide h-[170px] w-full resize-none bg-transparent text-[12.5px] leading-relaxed tracking-wide text-[#999999] outline-none placeholder:text-[#4f4f4f] transition-colors duration-700 focus:text-white/90 sm:h-[190px] md:h-[210px]"
+                  placeholder="write the part you kept quiet..."
+                  className="scrollbar-hide h-[240px] w-full resize-none bg-transparent text-[12.5px] leading-relaxed tracking-wide text-[#999999] outline-none placeholder:text-[#4f4f4f] transition-colors duration-700 focus:text-white/90 sm:h-[260px] md:h-[300px]"
                 />
 
                 <div className="mt-4 flex flex-col gap-3 border-t border-white/[0.045] pt-4 sm:flex-row sm:items-center sm:justify-between">
                   <p className="text-[8px] uppercase tracking-[0.2em] text-[#555555]">
-                    saved quietly
+                    kept without noise
                   </p>
 
                   <button
@@ -219,7 +206,7 @@ export default function SaySomething() {
                     disabled={!message.trim() || isSending}
                     className="group/btn inline-flex w-fit items-center gap-2 rounded-full border border-white/[0.055] bg-white/[0.025] px-5 py-2.5 text-[8.5px] uppercase tracking-[0.22em] text-[#777777] shadow-[0_10px_30px_rgba(0,0,0,0.5)] transition-all duration-700 hover:-translate-y-0.5 hover:border-white/15 hover:bg-white/[0.04] hover:text-white/80 disabled:cursor-not-allowed disabled:opacity-20"
                   >
-                    {isSending ? "sending..." : "release"}
+                    {isSending ? "leaving..." : "leave it here"}
                     <Send
                       size={10}
                       strokeWidth={1.5}
@@ -232,8 +219,8 @@ export default function SaySomething() {
           </div>
         ) : (
           <div className="animate-reveal mx-auto w-full max-w-md px-1 sm:px-2">
-            <div className="group relative overflow-hidden rounded-3xl border border-white/[0.045] bg-white/[0.012] px-5 py-10 text-center shadow-[0_16px_45px_rgba(0,0,0,0.5)] backdrop-blur-xl transition-all duration-700 hover:-translate-y-0.5 hover:border-white/10 hover:bg-white/[0.026] sm:px-7">
-              <div className="pointer-events-none absolute inset-x-10 top-0 h-px bg-gradient-to-r from-transparent via-white/10 to-transparent opacity-0 transition-opacity duration-700 group-hover:opacity-100" />
+            <div className="group relative overflow-hidden rounded-3xl border border-white/[0.045] bg-white/[0.012] px-5 py-10 text-center shadow-[0_16px_45px_rgba(0,0,0,0.5)] backdrop-blur-xl transition-all duration-700 hover:border-white/[0.08] hover:bg-white/[0.018] sm:px-7">
+              <div className="pointer-events-none absolute left-10 right-10 top-0 h-px bg-gradient-to-r from-transparent via-white/[0.12] to-transparent opacity-70" />
 
               <Sparkles
                 size={14}
@@ -241,8 +228,12 @@ export default function SaySomething() {
                 className="mx-auto mb-4 text-[#777777]"
               />
 
-              <p className="mb-5 text-[8px] uppercase tracking-[0.22em] text-[#666666] transition-colors duration-700 group-hover:text-white/80">
+              <p className="mb-2 text-[8px] uppercase tracking-[0.22em] text-[#666666] transition-colors duration-700 group-hover:text-white/80">
                 a trace returned
+              </p>
+
+              <p className="mx-auto mb-5 max-w-xs text-[10.5px] leading-relaxed text-[#666666]">
+                the rain carried something back.
               </p>
 
               <p className="mx-auto max-w-xs text-[12.5px] italic leading-relaxed text-white/80 sm:text-[13px]">
@@ -259,7 +250,7 @@ export default function SaySomething() {
                     strokeWidth={1.5}
                     className="transition-transform duration-700 ease-out group-hover/back:-translate-x-0.5"
                   />
-                  return to the entrance
+                  back to the entrance
                 </button>
 
                 <button
@@ -271,7 +262,7 @@ export default function SaySomething() {
                     strokeWidth={1.5}
                     className="transition-transform duration-700 ease-out group-hover/reset:rotate-180"
                   />
-                  write another note
+                  leave another note
                 </button>
               </div>
             </div>
@@ -281,7 +272,7 @@ export default function SaySomething() {
 
       <footer className="relative z-20 border-t border-white/[0.045] bg-[#020202]/90 px-6 py-16 text-center backdrop-blur-xl">
         <p className="mx-auto max-w-xl text-[10.5px] leading-relaxed tracking-[0.12em] text-[#555555]">
-          the note can stay here. you do not have to stand beside it.
+          some words are easier to leave behind than to carry home. they can stay here for a while.
         </p>
       </footer>
 
@@ -301,7 +292,7 @@ export default function SaySomething() {
 
         .drop {
           width: 1px;
-          height: 65px;
+          height: 58px;
           animation: rain linear infinite;
         }
 

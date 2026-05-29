@@ -114,6 +114,7 @@ export default function AdminGameArchivePage() {
   const [gameModalOpen, setGameModalOpen] = useState(false);
   const [editingGameId, setEditingGameId] = useState<string | null>(null);
   const [uploadingKey, setUploadingKey] = useState("");
+  const [expandedShelves, setExpandedShelves] = useState<Record<number, boolean>>({});
 
   const [gameForm, setGameForm] = useState({
     name: "",
@@ -129,7 +130,7 @@ export default function AdminGameArchivePage() {
     {
       title: "",
       type: "",
-      height: "max-h-60",
+      height: "h-60",
       sort_order: 0,
       images: [],
     },
@@ -147,6 +148,31 @@ export default function AdminGameArchivePage() {
   const hasMore = visibleCount < games.length;
   const expanded = games.length > 0 && visibleCount >= games.length;
   const isAllowed = userEmail === ALLOWED_EMAIL;
+
+  const normalizeDraftLogs = (logs: DraftLog[]) =>
+    logs.map((log, index) => ({
+      ...log,
+      sort_order: index,
+    }));
+
+  const addLogAtTop = () => {
+    setDraftLogs((prev) =>
+      normalizeDraftLogs([
+        {
+          title: "",
+          detail: "",
+          sort_order: 0,
+        },
+        ...prev,
+      ])
+    );
+  };
+
+  const removeDraftLog = (logIndex: number) => {
+    setDraftLogs((prev) =>
+      normalizeDraftLogs(prev.filter((_, index) => index !== logIndex))
+    );
+  };
 
   const footerText = useMemo(() => {
     const lines = [
@@ -231,23 +257,13 @@ export default function AdminGameArchivePage() {
   };
 
   useEffect(() => {
+    if (!authLoading && !userEmail) {
+      router.replace("/admin");
+      return;
+    }
+
     if (isAllowed) fetchGames();
-  }, [isAllowed]);
-
-  const signIn = async () => {
-    const email = prompt("Email:");
-    if (!email) return;
-
-    const { error } = await supabase.auth.signInWithOtp({
-      email,
-      options: {
-        emailRedirectTo: window.location.href,
-      },
-    });
-
-    if (error) alert(error.message);
-    else alert("Check your email for the login link.");
-  };
+  }, [authLoading, userEmail, isAllowed, router]);
 
   const uploadImage = async (file: File, folder: string) => {
     const ext = file.name.split(".").pop() || "png";
@@ -278,7 +294,7 @@ export default function AdminGameArchivePage() {
       {
         title: "",
         type: "",
-        height: "max-h-60",
+        height: "h-60",
         sort_order: 0,
         images: [],
       },
@@ -290,10 +306,12 @@ export default function AdminGameArchivePage() {
         sort_order: 0,
       },
     ]);
+    setExpandedShelves({});
   };
 
   const openAddModal = () => {
     resetGameModal();
+    setExpandedShelves({});
     setGameModalOpen(true);
   };
 
@@ -315,7 +333,7 @@ export default function AdminGameArchivePage() {
             id: section.id,
             title: section.title || "",
             type: section.type || "",
-            height: section.height || "max-h-60",
+            height: section.height || "h-60",
             sort_order: section.sort_order ?? sectionIndex,
             images:
               section.images?.map((img, imageIndex) => ({
@@ -328,7 +346,7 @@ export default function AdminGameArchivePage() {
             {
               title: "",
               type: "",
-              height: "max-h-60",
+              height: "h-60",
               sort_order: 0,
               images: [],
             },
@@ -352,6 +370,7 @@ export default function AdminGameArchivePage() {
           ]
     );
 
+    setExpandedShelves({});
     setGameModalOpen(true);
   };
 
@@ -370,13 +389,23 @@ export default function AdminGameArchivePage() {
     }
   };
 
-  const handleShelfImageUpload = async (shelfIndex: number, file?: File) => {
-    if (!file) return;
+  const handleShelfImageUpload = async (shelfIndex: number, files?: FileList | null) => {
+    const selectedFiles = Array.from(files || []);
+    if (selectedFiles.length === 0) return;
 
     setUploadingKey(`shelf-${shelfIndex}`);
 
     try {
-      const url = await uploadImage(file, "inventory");
+      const uploadedImages = await Promise.all(
+        selectedFiles.map(async (file, fileIndex) => {
+          const url = await uploadImage(file, "inventory");
+
+          return {
+            image_url: url,
+            sort_order: fileIndex,
+          };
+        })
+      );
 
       setDraftShelves((prev) =>
         prev.map((shelf, index) =>
@@ -385,10 +414,10 @@ export default function AdminGameArchivePage() {
                 ...shelf,
                 images: [
                   ...shelf.images,
-                  {
-                    image_url: url,
-                    sort_order: shelf.images.length,
-                  },
+                  ...uploadedImages.map((image, imageIndex) => ({
+                    ...image,
+                    sort_order: shelf.images.length + imageIndex,
+                  })),
                 ],
               }
             : shelf
@@ -500,7 +529,9 @@ export default function AdminGameArchivePage() {
         }
       }
 
-      for (const [logIndex, log] of draftLogs.entries()) {
+      const orderedLogs = normalizeDraftLogs(draftLogs);
+
+      for (const [logIndex, log] of orderedLogs.entries()) {
         if (!log.title.trim()) continue;
 
         if (log.id) {
@@ -588,12 +619,9 @@ export default function AdminGameArchivePage() {
 
   if (!userEmail) {
     return (
-      <AccessScreen
-        title="admin login"
-        subtitle="login with strangeclause@gmail.com to manage the archive."
-        button="send magic link"
-        onClick={signIn}
-      />
+      <main className="flex min-h-screen items-center justify-center bg-[#020202] text-white">
+        <Loader2 size={18} className="animate-spin" />
+      </main>
     );
   }
 
@@ -615,10 +643,10 @@ export default function AdminGameArchivePage() {
       <Background rainDrops={rainDrops} />
 
       <nav className="fixed left-0 right-0 top-0 z-[60] border-b border-white/[0.045] bg-[#020202]/72 backdrop-blur-xl">
-        <div className="mx-auto flex max-w-[1500px] items-center justify-between gap-4 px-6 py-5 sm:px-12 md:px-20 lg:px-28 xl:px-36">
+        <div className="mx-auto flex max-w-[1500px] items-center justify-between gap-3 px-5 py-4 sm:px-8 sm:py-5 md:px-20 lg:px-28 xl:px-36">
           <button
             onClick={() => router.back()}
-            className="group flex shrink-0 items-center gap-2 text-[8.5px] uppercase tracking-[0.22em] text-[#666666] transition-colors duration-700 hover:text-white/80 sm:text-[9px]"
+            className="group hidden shrink-0 items-center gap-2 text-[8.5px] uppercase tracking-[0.22em] text-[#666666] transition-colors duration-700 hover:text-white/80 md:flex md:text-[9px]"
           >
             <ArrowLeft size={12} strokeWidth={1.5} />
             leave
@@ -626,28 +654,28 @@ export default function AdminGameArchivePage() {
 
           <button
             onClick={() => router.push("/")}
-            className="group flex min-w-0 flex-col items-center text-center"
+            className="group mr-auto flex min-w-0 flex-col items-start text-left md:mr-0 md:items-center md:text-center"
           >
             <span className="text-[10px] font-medium uppercase tracking-[0.24em] text-white/80 sm:text-[11px]">
               strange clause
             </span>
-            <span className="hidden max-w-[320px] truncate text-[8px] lowercase tracking-[0.12em] text-[#666666] transition-colors duration-500 group-hover:text-white/60 sm:block">
+            <span className="block max-w-[220px] truncate text-[7px] lowercase tracking-[0.12em] text-[#666666] transition-colors duration-500 group-hover:text-white/60 sm:max-w-[320px] sm:text-[8px]">
               game archives
             </span>
           </button>
 
           <button
             onClick={openAddModal}
-            className="group flex shrink-0 items-center gap-2 rounded-full border border-white/[0.045] bg-white/[0.016] px-3.5 py-2 text-[8px] uppercase tracking-[0.22em] text-[#777777] shadow-[0_10px_30px_rgba(0,0,0,0.45)] transition-all duration-700 hover:-translate-y-0.5 hover:border-white/10 hover:bg-white/[0.03] hover:text-white/75 sm:px-4 sm:text-[8.5px]"
+            className="group flex shrink-0 items-center gap-2 rounded-full border border-white/[0.045] bg-white/[0.016] px-3 py-2 text-[8px] uppercase tracking-[0.22em] text-[#777777] shadow-[0_10px_30px_rgba(0,0,0,0.45)] transition-all duration-700 hover:-translate-y-0.5 hover:border-white/10 hover:bg-white/[0.03] hover:text-white/75 sm:px-4 sm:text-[8.5px]"
           >
             <Plus size={11} strokeWidth={1.5} />
-            add
+            <span className="hidden sm:inline">add</span>
           </button>
         </div>
       </nav>
 
-      <div className="relative z-20 mx-auto max-w-[1500px] px-6 pb-24 pt-36 sm:px-12 md:px-20 md:pt-44 lg:px-28 xl:px-36">
-        <header className="animate-fade-in mb-12 grid grid-cols-1 items-end gap-6 lg:grid-cols-[1.1fr_0.9fr]">
+      <div className="relative z-20 mx-auto max-w-[1500px] px-5 pb-20 pt-28 sm:px-8 sm:pt-36 md:px-20 md:pt-44 lg:px-28 xl:px-36">
+        <header className="animate-fade-in mb-10 grid grid-cols-1 items-end gap-5 sm:mb-12 lg:grid-cols-[1.1fr_0.9fr] lg:gap-8">
           <div className="max-w-2xl space-y-5">
             <div className="flex items-center gap-2">
               <CloudRain size={12} className="text-[#666666] stroke-[1.4px]" />
@@ -656,7 +684,7 @@ export default function AdminGameArchivePage() {
               </p>
             </div>
 
-            <h1 className="max-w-2xl text-[30px] font-light leading-[1.08] tracking-[-0.06em] text-white/90 md:text-[42px]">
+            <h1 className="max-w-2xl text-[26px] font-light leading-[1.08] tracking-[-0.06em] text-white/90 sm:text-[32px] md:text-[42px]">
               worlds that stayed
               <br />
               after logout.
@@ -694,7 +722,7 @@ export default function AdminGameArchivePage() {
             <EmptyArchives />
           ) : (
             <>
-              <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
                 {visibleGames.map((game, index) => (
                   <div
                     key={game.id}
@@ -746,7 +774,7 @@ export default function AdminGameArchivePage() {
                       <div className="absolute bottom-3 left-3 right-3">
                         <div className="mb-2 flex flex-wrap items-center gap-2">
                           <span className="rounded-full border border-white/[0.08] bg-black/70 px-2.5 py-1 text-[6.5px] uppercase tracking-[0.16em] text-[#d0d0d0] backdrop-blur-md">
-                            {game.status || "archived"}
+                            {game.status || "release"}
                           </span>
 
                           {game.mood && (
@@ -887,7 +915,7 @@ export default function AdminGameArchivePage() {
                   {
                     title: "",
                     type: "",
-                    height: "max-h-60",
+                    height: "h-60",
                     sort_order: prev.length,
                     images: [],
                   },
@@ -896,7 +924,17 @@ export default function AdminGameArchivePage() {
             />
 
             <div className="space-y-3">
-              {draftShelves.map((shelf, shelfIndex) => (
+              {draftShelves.map((shelf, shelfIndex) => {
+                const isShelfExpanded = Boolean(expandedShelves[shelfIndex]);
+                const visibleShelfImages = isShelfExpanded
+                  ? shelf.images
+                  : shelf.images.slice(0, 8);
+                const hiddenShelfImages = Math.max(
+                  shelf.images.length - visibleShelfImages.length,
+                  0
+                );
+
+                return (
                 <div
                   key={`${shelf.id || "new"}-${shelfIndex}`}
                   className="rounded-2xl border border-white/[0.07] bg-white/[0.018] p-3"
@@ -971,9 +1009,14 @@ export default function AdminGameArchivePage() {
                   </div>
 
                   <div className="mt-4 grid grid-cols-4 gap-2 sm:grid-cols-6">
-                    {shelf.images.map((img, imageIndex) => (
+                    {visibleShelfImages.map((img, visibleImageIndex) => {
+                      const imageIndex = shelf.images.findIndex(
+                        (image) => image === img
+                      );
+
+                      return (
                       <div
-                        key={`${img.id || "draft"}-${imageIndex}`}
+                        key={`${img.id || "draft"}-${imageIndex}-${visibleImageIndex}`}
                         className="group relative aspect-square overflow-hidden rounded-xl border border-white/[0.07] bg-black"
                       >
                         <img
@@ -1010,45 +1053,73 @@ export default function AdminGameArchivePage() {
                           <X size={10} />
                         </button>
                       </div>
-                    ))}
+                    );
+                    })}
+
+                    {!isShelfExpanded && hiddenShelfImages > 0 && (
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setExpandedShelves((prev) => ({
+                            ...prev,
+                            [shelfIndex]: true,
+                          }))
+                        }
+                        className="flex aspect-square items-center justify-center rounded-xl border border-white/[0.07] bg-black/45 text-[7px] uppercase tracking-[0.16em] text-[#777777] transition hover:border-white/15 hover:text-white"
+                      >
+                        +{hiddenShelfImages} more
+                      </button>
+                    )}
 
                     <label className="flex aspect-square cursor-pointer items-center justify-center rounded-xl border border-dashed border-white/[0.1] bg-white/[0.02] text-white/45 transition hover:bg-white/[0.04]">
                       <input
                         type="file"
                         accept="image/*"
+                        multiple
                         hidden
-                        onChange={(event) =>
-                          handleShelfImageUpload(
-                            shelfIndex,
-                            event.target.files?.[0]
-                          )
-                        }
+                        onChange={(event) => {
+                          handleShelfImageUpload(shelfIndex, event.target.files);
+                          event.currentTarget.value = "";
+                        }}
                       />
 
                       {uploadingKey === `shelf-${shelfIndex}` ? (
                         <Loader2 size={16} className="animate-spin" />
                       ) : (
-                        <Plus size={18} />
+                        <div className="flex flex-col items-center gap-1 text-center">
+                          <Plus size={18} />
+                          <span className="text-[6px] uppercase tracking-[0.16em]">
+                            many
+                          </span>
+                        </div>
                       )}
                     </label>
                   </div>
+
+                  {isShelfExpanded && shelf.images.length > 8 && (
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setExpandedShelves((prev) => ({
+                          ...prev,
+                          [shelfIndex]: false,
+                        }))
+                      }
+                      className="mt-3 inline-flex items-center gap-2 rounded-full border border-white/[0.055] bg-white/[0.025] px-3 py-2 text-[7px] uppercase tracking-[0.18em] text-[#777777] transition-all duration-700 hover:border-white/15 hover:bg-white/[0.04] hover:text-white"
+                    >
+                      collapse images
+                      <ChevronUp size={10} />
+                    </button>
+                  )}
                 </div>
-              ))}
+                );
+              })}
             </div>
 
             <ModalDivider
               title="grind logs"
               buttonLabel="add log"
-              onAdd={() =>
-                setDraftLogs((prev) => [
-                  ...prev,
-                  {
-                    title: "",
-                    detail: "",
-                    sort_order: prev.length,
-                  },
-                ])
-              }
+              onAdd={addLogAtTop}
             />
 
             <div className="space-y-3">
@@ -1069,9 +1140,7 @@ export default function AdminGameArchivePage() {
                           deleteExistingRow("roblox_game_grind_logs", log.id);
                         }
 
-                        setDraftLogs((prev) =>
-                          prev.filter((_, index) => index !== logIndex)
-                        );
+                        removeDraftLog(logIndex);
                       }}
                       className="text-red-200/70 transition hover:text-red-100"
                     >
@@ -1110,7 +1179,7 @@ export default function AdminGameArchivePage() {
 
             <div className="flex items-center justify-between border-t border-white/[0.055] pt-4">
               <p className="text-[8px] uppercase tracking-[0.18em] text-[#666666]">
-                quiet archive
+                locked room
               </p>
 
               <button
@@ -1265,7 +1334,7 @@ function Modal({
           </h2>
 
           <p className="mx-auto mt-2 max-w-sm text-[11px] leading-relaxed text-[#777777]">
-            keep one small world here before the server goes quiet again.
+            put down one quiet scene so it stays here after you close the tab.
           </p>
         </div>
 

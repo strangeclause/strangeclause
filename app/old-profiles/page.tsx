@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import type { CSSProperties } from "react";
 import { useRouter } from "next/navigation";
 import {
   ExternalLink,
@@ -274,10 +275,10 @@ export default function RobloxProfilePage() {
       </div>
 
       <nav className="fixed left-0 right-0 top-0 z-[60] border-b border-white/[0.045] bg-[#020202]/72 backdrop-blur-xl">
-        <div className="mx-auto flex max-w-[1500px] items-center justify-between gap-4 px-6 py-5 sm:px-12 md:px-20 lg:px-28 xl:px-36">
+        <div className="relative mx-auto flex max-w-[1500px] items-center justify-between gap-3 px-5 py-4 sm:px-8 sm:py-5 md:px-20 lg:px-28 xl:px-36">
           <button
             onClick={() => router.push("/")}
-            className="group flex shrink-0 items-center gap-2 text-[8.5px] uppercase tracking-[0.22em] text-[#666666] transition-colors duration-700 hover:text-white/80 sm:text-[9px]"
+            className="group hidden shrink-0 items-center gap-2 text-[8.5px] uppercase tracking-[0.22em] text-[#666666] transition-colors duration-700 hover:text-white/80 md:flex md:text-[9px]"
           >
             <ArrowLeft
               size={12}
@@ -289,13 +290,13 @@ export default function RobloxProfilePage() {
 
           <button
             onClick={() => router.push("/")}
-            className="group flex min-w-0 flex-col items-center text-center"
+            className="group mr-auto flex min-w-0 flex-col items-start text-left md:absolute md:left-1/2 md:mr-0 md:-translate-x-1/2 md:items-center md:text-center"
           >
-            <span className="text-[10px] font-medium uppercase tracking-[0.24em] text-white/80 sm:text-[11px]">
+            <span className="text-[9.5px] font-medium uppercase tracking-[0.22em] text-white/80 sm:text-[10.5px] md:text-[11px]">
               strange clause
             </span>
 
-            <span className="hidden max-w-[270px] truncate text-[8px] lowercase tracking-[0.12em] text-[#666666] transition-colors duration-500 group-hover:text-white/60 sm:block">
+            <span className="max-w-[190px] truncate text-[7.5px] lowercase tracking-[0.12em] text-[#666666] transition-colors duration-500 group-hover:text-white/60 sm:max-w-[240px] md:max-w-[270px] md:text-[8px]">
               old profile
             </span>
           </button>
@@ -304,7 +305,7 @@ export default function RobloxProfilePage() {
             href={robloxProfileUrl}
             target="_blank"
             rel="noopener noreferrer"
-            className="group flex shrink-0 items-center gap-2 rounded-full border border-white/[0.045] bg-white/[0.016] px-3.5 py-2 text-[8px] uppercase tracking-[0.22em] text-[#777777] shadow-[0_10px_30px_rgba(0,0,0,0.45)] transition-all duration-700 hover:-translate-y-0.5 hover:border-white/10 hover:bg-white/[0.03] hover:text-white/75 sm:px-4 sm:text-[8.5px]"
+            className="group flex shrink-0 items-center gap-2 rounded-full border border-white/[0.045] bg-white/[0.016] px-3 py-2 text-[7.5px] uppercase tracking-[0.18em] text-[#777777] shadow-[0_10px_30px_rgba(0,0,0,0.45)] transition-all duration-700 hover:-translate-y-0.5 hover:border-white/10 hover:bg-white/[0.03] hover:text-white/75 sm:px-4 sm:text-[8.5px]"
           >
             <Gamepad2
               size={11}
@@ -316,7 +317,7 @@ export default function RobloxProfilePage() {
         </div>
       </nav>
 
-      <div className="relative z-20 mx-auto max-w-[1500px] space-y-14 px-6 pb-24 pt-36 sm:px-12 md:px-20 md:pt-44 lg:space-y-20 lg:px-28 xl:px-36">
+      <div className="relative z-20 mx-auto max-w-[1500px] space-y-12 px-5 pb-20 pt-28 sm:px-8 sm:pt-34 md:px-20 md:pt-44 lg:space-y-20 lg:px-28 xl:px-36">
         <section className="animate-fade-in grid grid-cols-1 items-start gap-6 lg:grid-cols-[1.1fr_0.9fr] lg:gap-8 xl:gap-10">
           <div className="max-w-2xl space-y-5">
             <div className="flex items-center gap-2">
@@ -366,7 +367,7 @@ export default function RobloxProfilePage() {
                     </p>
                   </div>
 
-                  <p className="max-w-md text-[16px] font-light leading-snug tracking-[-0.04em] text-white/85 sm:text-[19px]">
+                  <p className="max-w-md text-[15px] font-light leading-snug tracking-[-0.04em] text-white/85 sm:text-[19px]">
                     online somewhere quiet, between games that felt like small
                     rooms.
                   </p>
@@ -693,7 +694,7 @@ const GameCard = ({
     <button
       type="button"
       onClick={onOpen}
-      className="group relative w-[270px] shrink-0 snap-start overflow-hidden rounded-2xl border border-white/[0.04] bg-white/[0.01] text-left shadow-[0_18px_55px_rgba(0,0,0,0.55)] backdrop-blur-md transition-all duration-700 hover:-translate-y-1 hover:border-white/10 hover:bg-white/[0.025] sm:w-[310px]"
+      className="group relative w-[min(82vw,270px)] shrink-0 snap-start overflow-hidden rounded-2xl border border-white/[0.04] bg-white/[0.01] text-left shadow-[0_18px_55px_rgba(0,0,0,0.55)] backdrop-blur-md transition-all duration-700 hover:-translate-y-1 hover:border-white/10 hover:bg-white/[0.025] sm:w-[310px]"
     >
       <div className="relative h-36 overflow-hidden border-b border-white/[0.04] bg-black/40">
         {game.banner ? (
@@ -785,6 +786,39 @@ const GameCard = ({
   );
 };
 
+const getInventoryImageStyle = (height: string): CSSProperties => {
+  const rawHeight = (height || "h-60").trim();
+  const normalizedHeight = rawHeight.replace(/^max-h-/, "h-");
+
+  const getValue = () => {
+    const arbitraryMatch = normalizedHeight.match(/^h-\[(.+)\]$/);
+    if (arbitraryMatch) return arbitraryMatch[1];
+
+    const tailwindSpacingMatch = normalizedHeight.match(/^h-(\d+(?:\.5)?)$/);
+    if (tailwindSpacingMatch) {
+      return `${Number(tailwindSpacingMatch[1]) * 4}px`;
+    }
+
+    if (/^\d+(?:\.\d+)?$/.test(normalizedHeight)) {
+      return `${normalizedHeight}px`;
+    }
+
+    if (/^\d+(?:\.\d+)?(px|rem|vh|vw|%)$/.test(normalizedHeight)) {
+      return normalizedHeight;
+    }
+
+    return "240px";
+  };
+
+  const value = getValue();
+
+  return {
+    height: value,
+    minHeight: value,
+    maxHeight: value,
+  };
+};
+
 const GameModal = ({
   game,
   onClose,
@@ -792,7 +826,7 @@ const GameModal = ({
   game: GameArchive;
   onClose: () => void;
 }) => (
-  <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/75 px-4 py-8 backdrop-blur-md sm:px-6">
+  <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/75 px-3 py-4 backdrop-blur-md sm:px-6 sm:py-8">
     <button
       type="button"
       onClick={onClose}
@@ -800,7 +834,7 @@ const GameModal = ({
       aria-label="close inventory window"
     />
 
-    <section className="relative z-10 flex max-h-[86vh] w-full max-w-5xl flex-col overflow-hidden rounded-3xl border border-white/[0.07] bg-[#050505]/95 shadow-[0_35px_100px_rgba(0,0,0,0.8)]">
+    <section className="relative z-10 flex max-h-[90vh] w-full max-w-5xl flex-col overflow-hidden rounded-[1.35rem] border border-white/[0.07] bg-[#050505]/95 shadow-[0_35px_100px_rgba(0,0,0,0.8)] sm:rounded-3xl">
       <div className="relative h-44 shrink-0 overflow-hidden border-b border-white/[0.05] bg-black sm:h-56">
         {game.banner ? (
           <img
@@ -859,7 +893,7 @@ const GameModal = ({
         </div>
       </div>
 
-      <div className="modal-scroll overflow-y-auto p-5 sm:p-7">
+      <div className="modal-scroll overflow-y-auto p-4 sm:p-7">
         <div className="grid gap-6 lg:grid-cols-12">
           <div className="space-y-5 lg:col-span-7">
             <div className="mb-4 flex items-center justify-between gap-4 border-b border-white/[0.05] pb-3">
@@ -890,16 +924,20 @@ const GameModal = ({
                     </div>
 
                     {category.images.length > 0 ? (
-                      <div className="category-scroll flex items-end gap-4 overflow-x-auto pb-2">
+                      <div className="category-scroll flex items-stretch gap-4 overflow-x-auto pb-2">
                         {category.images.map((img, index) => (
-                          <img
+                          <div
                             key={`${category.id}-${index}`}
-                            src={img}
-                            alt={category.title}
-                            className={`h-auto w-auto shrink-0 rounded-[10px] grayscale opacity-45 transition-all duration-700 hover:scale-[1.03] hover:grayscale-0 hover:opacity-95 ${
-                              category.height || "max-h-60"
-                            }`}
-                          />
+                            style={getInventoryImageStyle(category.height)}
+                            className="flex shrink-0 items-center justify-center overflow-hidden rounded-[10px] border border-white/[0.045] bg-black/35"
+                          >
+                            <img
+                              src={img}
+                              alt={category.title}
+                              style={{ height: "100%", width: "auto", maxWidth: "none" }}
+                              className="block object-contain grayscale opacity-45 transition-all duration-700 hover:scale-[1.03] hover:grayscale-0 hover:opacity-95"
+                            />
+                          </div>
                         ))}
                       </div>
                     ) : (

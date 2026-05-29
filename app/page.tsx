@@ -298,7 +298,8 @@ export default function StrangeClausePage() {
       </nav>
 
       <div className="relative z-20 mx-auto grid max-w-[1500px] grid-cols-1 gap-12 px-6 pb-24 pt-36 sm:px-12 md:px-20 md:pt-44 lg:grid-cols-12 lg:gap-16 lg:px-28 xl:gap-24 xl:px-36">
-        <aside className="h-fit w-full rounded-3xl border border-white/[0.045] bg-white/[0.012] p-6 shadow-[0_30px_80px_rgba(0,0,0,0.62)] backdrop-blur-xl sm:p-8 lg:sticky lg:top-44 lg:col-span-4">
+        <div className="h-fit w-full lg:sticky lg:top-44 lg:col-span-4">
+          <aside className="rounded-3xl border border-white/[0.045] bg-white/[0.012] p-6 shadow-[0_30px_80px_rgba(0,0,0,0.62)] backdrop-blur-xl sm:p-8">
           <div className="mb-5 flex items-center gap-2">
             <span className="h-1 w-1 rounded-full bg-white/40 shadow-[0_0_8px_rgba(255,255,255,0.35)]" />
             <p className="text-[8.5px] uppercase tracking-[0.24em] text-[#6a6a6a]">
@@ -345,7 +346,25 @@ export default function StrangeClausePage() {
               />
             </div>
           </button>
+
         </aside>
+
+          <div className="mt-8 rounded-2xl border border-white/[0.045] bg-white/[0.008] p-3.5 shadow-[0_14px_38px_rgba(0,0,0,0.38)] backdrop-blur-xl">
+            <div className="space-y-2.5">
+              <div className="w-fit max-w-[92%] rounded-[18px] rounded-bl-md border border-white/[0.05] bg-white/[0.018] px-3 py-2">
+                <p className="text-[10px] leading-relaxed text-[#747474]">
+                  are you still here, or did the rain finally make you go quiet too?
+                </p>
+              </div>
+
+              <div className="ml-auto w-fit max-w-[88%] rounded-[18px] rounded-br-md border border-white/[0.05] bg-black/35 px-3 py-2 text-right">
+                <p className="text-[10px] leading-relaxed text-[#777777]">
+                  for a while. i only came back to check if the light was still on.
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
 
         <div
           className="space-y-16 sm:space-y-24 lg:col-span-8"
@@ -471,9 +490,9 @@ export default function StrangeClausePage() {
 
             <div className="rounded-2xl border border-white/[0.045] bg-white/[0.012] px-5 py-6 shadow-[0_16px_45px_rgba(0,0,0,0.5)] backdrop-blur-xl transition-all duration-700 hover:border-white/10 hover:bg-white/[0.022] sm:px-6">
               <div className="mb-5 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-                <div className="flex items-center gap-2">
-                  <Mic2 size={13} className="text-[#666666] stroke-[1.5px]" />
-                  <h3 className="text-[12px] font-light text-[#888888]">
+                <div className="flex min-w-0 items-center gap-2">
+                  <Mic2 size={13} className="shrink-0 text-[#666666] stroke-[1.5px]" />
+                  <h3 className="truncate text-[9px] font-light uppercase tracking-[0.2em] text-white/70 sm:text-[9.5px]">
                     {activeTrack?.title || "some small noise from the radio"}
                   </h3>
                 </div>
@@ -531,7 +550,7 @@ export default function StrangeClausePage() {
                 <div className="flex items-center gap-2">
                   <Ghost size={13} className="text-[#666666] stroke-[1.5px]" />
                   <h2 className="text-[12px] font-light tracking-wide text-white/80">
-                    SREEDS OF PAPER
+                    SHREDS OF PAPER
                   </h2>
                 </div>
 
@@ -614,6 +633,7 @@ export default function StrangeClausePage() {
               icon={<FaSpotify size={13} />}
             />
           </section>
+
         </div>
       </div>
 

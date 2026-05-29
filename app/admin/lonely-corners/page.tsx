@@ -55,6 +55,8 @@ export default function PlaceAdminPage() {
   const [editingId, setEditingId] = useState<number | null>(null);
   const [visibleCount, setVisibleCount] = useState(COLLAPSE_SIZE);
   const [rainDrops, setRainDrops] = useState<RainDrop[]>([]);
+  const [userEmail, setUserEmail] = useState<string | null>(null);
+  const [authLoading, setAuthLoading] = useState(true);
 
   const [form, setForm] = useState({
     title: "",
@@ -65,6 +67,7 @@ export default function PlaceAdminPage() {
     is_anonymous: true,
   });
 
+  const isAdmin = userEmail === "strangeclause@gmail.com";
   const visiblePlaces = places.slice(0, visibleCount);
   const hasMore = visibleCount < places.length;
   const expanded = visibleCount >= places.length;
@@ -94,6 +97,42 @@ export default function PlaceAdminPage() {
 
     setRainDrops(drops);
   }, []);
+
+  useEffect(() => {
+    const initAuth = async () => {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+
+      const email = session?.user?.email || null;
+
+      if (!email) {
+        router.replace("/admin");
+        setAuthLoading(false);
+        return;
+      }
+
+      setUserEmail(email);
+      setAuthLoading(false);
+    };
+
+    initAuth();
+
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, session) => {
+      const email = session?.user?.email || null;
+      setUserEmail(email);
+
+      if (!email) {
+        router.replace("/admin");
+      }
+    });
+
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, [router]);
 
   const fetchPlaces = async () => {
     const { data } = await supabase
@@ -232,6 +271,14 @@ export default function PlaceAdminPage() {
     );
   };
 
+  if (authLoading) {
+    return (
+      <main className="flex min-h-screen items-center justify-center bg-[#020202] text-white">
+        <Loader2 size={18} className="animate-spin" />
+      </main>
+    );
+  }
+
   return (
     <main
       className={`${inter.className} relative min-h-screen overflow-x-hidden bg-[#020202] text-[#b7b7b7] font-light text-[13px] antialiased selection:bg-white/10 selection:text-white`}
@@ -239,10 +286,10 @@ export default function PlaceAdminPage() {
       <Background rainDrops={rainDrops} />
 
       <nav className="fixed left-0 right-0 top-0 z-[60] border-b border-white/[0.045] bg-[#020202]/72 backdrop-blur-xl">
-        <div className="mx-auto flex max-w-[1500px] items-center justify-between gap-4 px-6 py-5 sm:px-12 md:px-20 lg:px-28 xl:px-36">
+        <div className="mx-auto grid max-w-[1500px] grid-cols-[1fr_auto] items-center gap-3 px-5 py-4 sm:px-8 sm:py-5 md:grid-cols-[1fr_auto_1fr] md:px-20 lg:px-28 xl:px-36">
           <button
             onClick={() => router.back()}
-            className="group flex shrink-0 items-center gap-2 text-[8.5px] uppercase tracking-[0.22em] text-[#666666] transition-colors duration-700 hover:text-white/80 sm:text-[9px]"
+            className="group hidden shrink-0 items-center gap-2 justify-self-start text-[8.5px] uppercase tracking-[0.22em] text-[#666666] transition-colors duration-700 hover:text-white/80 md:flex md:text-[9px]"
           >
             <ArrowLeft
               size={12}
@@ -254,13 +301,13 @@ export default function PlaceAdminPage() {
 
           <button
             onClick={() => router.push("/")}
-            className="group flex min-w-0 flex-col items-center text-center"
+            className="group col-start-1 row-start-1 flex min-w-0 flex-col items-start justify-self-start text-left md:col-start-2 md:items-center md:justify-self-center md:text-center"
           >
             <span className="text-[10px] font-medium uppercase tracking-[0.24em] text-white/80 sm:text-[11px]">
               strange clause
             </span>
 
-            <span className="hidden max-w-[320px] truncate text-[8px] lowercase tracking-[0.12em] text-[#666666] transition-colors duration-500 group-hover:text-white/60 sm:block">
+            <span className="block max-w-[220px] truncate text-[7px] lowercase tracking-[0.12em] text-[#666666] transition-colors duration-500 group-hover:text-white/60 sm:max-w-[320px] sm:text-[8px]">
               lonely corners
             </span>
           </button>
@@ -270,7 +317,7 @@ export default function PlaceAdminPage() {
               resetForm();
               setOpen(true);
             }}
-            className="group flex shrink-0 items-center gap-2 rounded-full border border-white/[0.045] bg-white/[0.016] px-3.5 py-2 text-[8px] uppercase tracking-[0.22em] text-[#777777] shadow-[0_10px_30px_rgba(0,0,0,0.45)] transition-all duration-700 hover:-translate-y-0.5 hover:border-white/10 hover:bg-white/[0.03] hover:text-white/75 sm:px-4 sm:text-[8.5px]"
+            className="group col-start-2 row-start-1 flex shrink-0 items-center justify-self-end gap-2 rounded-full border border-white/[0.045] bg-white/[0.016] px-3.5 py-2 text-[8px] uppercase tracking-[0.22em] text-[#777777] shadow-[0_10px_30px_rgba(0,0,0,0.45)] transition-all duration-700 hover:-translate-y-0.5 hover:border-white/10 hover:bg-white/[0.03] hover:text-white/75 sm:px-4 sm:text-[8.5px] md:col-start-3"
           >
             <Plus
               size={11}
@@ -438,18 +485,19 @@ export default function PlaceAdminPage() {
 
       {open && (
         <div
-          onClick={() => setOpen(false)}
+          onClick={() => !saving && setOpen(false)}
           className="animate-modal fixed inset-0 z-[999] flex items-center justify-center bg-black/90 p-4 backdrop-blur-xl sm:p-6"
         >
           <div
             onClick={(e) => e.stopPropagation()}
-            className="modal-scroll relative max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-3xl border border-white/[0.06] bg-[#070707]/95 p-5 shadow-[0_30px_90px_rgba(0,0,0,0.75)] backdrop-blur-2xl sm:p-6"
+            className="modal-scroll relative max-h-[90vh] w-full max-w-3xl overflow-y-auto rounded-3xl border border-white/[0.06] bg-[#070707]/95 p-5 shadow-[0_30px_90px_rgba(0,0,0,0.75)] backdrop-blur-2xl sm:p-6"
           >
             <div className="pointer-events-none absolute inset-x-10 top-0 h-px bg-gradient-to-r from-transparent via-white/12 to-transparent" />
 
             <button
-              onClick={() => setOpen(false)}
-              className="absolute right-5 top-5 z-20 text-[#666666] transition-colors duration-700 hover:text-white"
+              onClick={() => !saving && setOpen(false)}
+              disabled={saving}
+              className="absolute right-5 top-5 z-20 text-[#666666] transition-colors duration-700 hover:text-white disabled:opacity-30"
             >
               <X size={14} />
             </button>
@@ -470,11 +518,11 @@ export default function PlaceAdminPage() {
               </h2>
 
               <p className="mx-auto mt-2 max-w-sm text-[11px] leading-relaxed text-[#777777]">
-                keep one quiet place here before the weather changes again.
+                put down one quiet scene so it stays here after you close the tab.
               </p>
             </div>
 
-            <div className="space-y-4">
+            <div className="grid gap-4">
               <input
                 value={form.title}
                 onChange={(e) =>
@@ -499,7 +547,7 @@ export default function PlaceAdminPage() {
                 className="w-full border-b border-white/[0.07] bg-transparent py-2.5 text-[9px] uppercase tracking-[0.18em] text-[#d0d0d0] outline-none transition-colors placeholder:text-[#666666] focus:border-white/20"
               />
 
-              <label className="group flex min-h-[190px] cursor-pointer items-center justify-center overflow-hidden rounded-2xl border border-dashed border-white/[0.055] bg-white/[0.025] transition-all duration-700 hover:border-white/12 hover:bg-white/[0.04]">
+              <label className="group flex min-h-[220px] cursor-pointer items-center justify-center overflow-hidden rounded-2xl border border-dashed border-white/[0.055] bg-white/[0.025] p-4 text-center transition-all duration-700 hover:border-white/15 hover:bg-white/[0.04]">
                 <input
                   ref={fileInputRef}
                   type="file"
@@ -512,7 +560,7 @@ export default function PlaceAdminPage() {
                   <img
                     src={form.image_url}
                     alt="upload"
-                    className="max-h-[340px] w-full object-cover grayscale opacity-80"
+                    className="max-h-[340px] w-full rounded-xl object-cover grayscale opacity-80"
                   />
                 ) : (
                   <div className="flex flex-col items-center gap-3 text-[#777777]">
@@ -548,13 +596,14 @@ export default function PlaceAdminPage() {
 
               <div className="flex items-center justify-between border-t border-white/[0.055] pt-4">
                 <p className="text-[8px] uppercase tracking-[0.18em] text-[#666666]">
-                  quiet archive
+                  locked room
                 </p>
 
                 <button
                   onClick={submitPlace}
                   disabled={
                     saving ||
+                    !isAdmin ||
                     !form.title.trim() ||
                     !form.image_url.trim() ||
                     !form.description.trim()

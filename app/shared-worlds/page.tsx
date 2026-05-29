@@ -7,6 +7,7 @@ import {
   ChevronLeft,
   Ghost,
   X,
+  ChevronRight,
   Monitor,
   Cloud,
   Box,
@@ -46,6 +47,7 @@ type Encounter = {
   matching_song?: string;
   spotify_url?: string;
   movie_character?: string;
+  movie_character_image_url?: string;
   tmdb_url?: string;
   movie_reason?: string;
 };
@@ -66,6 +68,7 @@ export default function RobloxEncounterPage() {
   const [loading, setLoading] = useState(true);
   const [rainDrops, setRainDrops] = useState<RainDrop[]>([]);
   const [visibleCount, setVisibleCount] = useState(GALLERY_LIMIT);
+  const [typingText, setTypingText] = useState("");
 
   const clean = (text?: string) => text?.replace(/[._-]/g, " ") || "";
 
@@ -74,6 +77,28 @@ export default function RobloxEncounterPage() {
 
   const lowerClean = (text?: string, fallback = "") =>
     (clean(text) || fallback).toLowerCase();
+
+  const getSpotifyEmbedUrl = (url?: string) => {
+    if (!url) return "";
+
+    const trackMatch = url.match(/open\.spotify\.com\/track\/([a-zA-Z0-9]+)/);
+    const episodeMatch = url.match(/open\.spotify\.com\/episode\/([a-zA-Z0-9]+)/);
+    const playlistMatch = url.match(/open\.spotify\.com\/playlist\/([a-zA-Z0-9]+)/);
+
+    if (trackMatch?.[1]) {
+      return `https://open.spotify.com/embed/track/${trackMatch[1]}?utm_source=generator&theme=0`;
+    }
+
+    if (episodeMatch?.[1]) {
+      return `https://open.spotify.com/embed/episode/${episodeMatch[1]}?utm_source=generator&theme=0`;
+    }
+
+    if (playlistMatch?.[1]) {
+      return `https://open.spotify.com/embed/playlist/${playlistMatch[1]}?utm_source=generator&theme=0`;
+    }
+
+    return url.includes("/embed/") ? url : "";
+  };
 
   useEffect(() => {
     const drops = Array.from({ length: 20 }).map(() => ({
@@ -85,18 +110,72 @@ export default function RobloxEncounterPage() {
     setRainDrops(drops);
   }, []);
 
+  useEffect(() => {
+    const phrases = [
+      "lets play one more match",
+      "wait im still loading",
+      "the lobby feels quieter now",
+      "i miss those late night servers",
+      "join me if u see this",
+      "u still remember that map right",
+      "i thought u were gonna rejoin",
+    ];
+
+    let phraseIndex = 0;
+    let letterIndex = 0;
+    let deleting = false;
+    let timeoutId: ReturnType<typeof setTimeout>;
+
+    const runTyping = () => {
+      const currentPhrase = phrases[phraseIndex];
+
+      if (!deleting) {
+        setTypingText(currentPhrase.slice(0, letterIndex + 1));
+        letterIndex += 1;
+
+        if (letterIndex === currentPhrase.length) {
+          deleting = true;
+          timeoutId = setTimeout(runTyping, 1100);
+          return;
+        }
+      } else {
+        setTypingText(currentPhrase.slice(0, letterIndex - 1));
+        letterIndex -= 1;
+
+        if (letterIndex === 0) {
+          deleting = false;
+          phraseIndex = (phraseIndex + 1) % phrases.length;
+        }
+      }
+
+      timeoutId = setTimeout(runTyping, deleting ? 36 : 72);
+    };
+
+    runTyping();
+
+    return () => clearTimeout(timeoutId);
+  }, []);
+
   const fetchData = useCallback(async () => {
+    setLoading(true);
+
     try {
       const { data, error } = await supabase
         .from("roblox_encounters")
-        .select("*")
-        .order("id", { ascending: false });
+        .select(
+          "id,title,name,image_url,description,how_i_called_them,how_they_called_me,first_met,first_impression,favorite_map,common_words,personality_bullets,why_i_remember_them,short_character_summary,matching_song,spotify_url,movie_character,movie_character_image_url,tmdb_url,movie_reason"
+        );
 
       if (error) throw error;
 
-      setEncounters(data || []);
+      const rows = ((data || []) as Encounter[]).sort((a, b) =>
+        String(b.id || "").localeCompare(String(a.id || ""))
+      );
+
+      setEncounters(rows);
     } catch (error) {
       console.error("Failed to fetch roblox encounters:", error);
+      setEncounters([]);
     } finally {
       setLoading(false);
     }
@@ -137,10 +216,10 @@ export default function RobloxEncounterPage() {
       <Background rainDrops={rainDrops} />
 
       <nav className="fixed left-0 right-0 top-0 z-[60] border-b border-white/[0.045] bg-[#020202]/72 backdrop-blur-xl">
-        <div className="mx-auto flex max-w-[1500px] items-center justify-between gap-4 px-6 py-5 sm:px-12 md:px-20 lg:px-28 xl:px-36">
+        <div className="mx-auto grid max-w-[1500px] grid-cols-[1fr_auto] items-center gap-3 px-5 py-4 sm:px-8 sm:py-5 md:grid-cols-[1fr_auto_1fr] md:px-20 lg:px-28 xl:px-36">
           <button
             onClick={() => router.push("/")}
-            className="group flex shrink-0 items-center gap-2 text-[8.5px] uppercase tracking-[0.22em] text-[#666666] transition-colors duration-700 hover:text-white/80 sm:text-[9px]"
+            className="group hidden shrink-0 items-center gap-2 justify-self-start text-[8.5px] uppercase tracking-[0.22em] text-[#666666] transition-colors duration-700 hover:text-white/80 md:flex md:text-[9px]"
           >
             <ChevronLeft
               size={12}
@@ -152,18 +231,18 @@ export default function RobloxEncounterPage() {
 
           <button
             onClick={() => router.push("/")}
-            className="group flex min-w-0 flex-col items-center text-center"
+            className="group col-start-1 row-start-1 flex min-w-0 flex-col items-start justify-self-start text-left md:col-start-2 md:items-center md:justify-self-center md:text-center"
           >
             <span className="text-[10px] font-medium uppercase tracking-[0.24em] text-white/80 sm:text-[11px]">
               strange clause
             </span>
 
-            <span className="hidden max-w-[270px] truncate text-[8px] lowercase tracking-[0.12em] text-[#666666] transition-colors duration-500 group-hover:text-white/60 sm:block">
+            <span className="block max-w-[220px] truncate text-[7px] lowercase tracking-[0.12em] text-[#666666] transition-colors duration-500 group-hover:text-white/60 sm:max-w-[270px] sm:text-[8px]">
               shared worlds
             </span>
           </button>
 
-          <div className="flex shrink-0 items-center gap-2 rounded-full border border-white/[0.045] bg-white/[0.016] px-3.5 py-2 text-[8px] uppercase tracking-[0.22em] text-[#777777] shadow-[0_10px_30px_rgba(0,0,0,0.45)]">
+          <div className="col-start-2 row-start-1 flex shrink-0 items-center justify-self-end gap-2 rounded-full border border-white/[0.045] bg-white/[0.016] px-3 py-2 text-[8px] uppercase tracking-[0.22em] text-[#777777] shadow-[0_10px_30px_rgba(0,0,0,0.45)] md:col-start-3">
             <Server size={11} strokeWidth={1.5} />
             archive
           </div>
@@ -251,46 +330,69 @@ export default function RobloxEncounterPage() {
               count={`${visibleEncounters.length} shown · ${encounters.length} saved`}
             />
 
-            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6">
+            <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
               {visibleEncounters.map((friend, index) => (
                 <button
                   key={friend.id}
                   onClick={() => setSelected(friend)}
-                  className="group relative overflow-hidden rounded-2xl border border-white/[0.045] bg-white/[0.012] text-left shadow-[0_12px_36px_rgba(0,0,0,0.45)] backdrop-blur-xl transition-all duration-700 hover:-translate-y-0.5 hover:border-white/10 hover:bg-white/[0.026]"
+                  className="group relative overflow-hidden rounded-2xl border border-white/[0.045] bg-white/[0.012] p-2.5 text-left shadow-[0_10px_28px_rgba(0,0,0,0.42)] backdrop-blur-xl transition-all duration-700 hover:-translate-y-0.5 hover:border-white/10 hover:bg-white/[0.026]"
                 >
-                  <div className="pointer-events-none absolute inset-x-5 top-0 z-30 h-px bg-gradient-to-r from-transparent via-white/10 to-transparent opacity-0 transition-opacity duration-700 group-hover:opacity-100" />
+                  <div className="pointer-events-none absolute inset-x-6 top-0 z-30 h-px bg-gradient-to-r from-transparent via-white/10 to-transparent opacity-0 transition-opacity duration-700 group-hover:opacity-100" />
 
-                  <div className="absolute right-2 top-2 z-30 rounded-full border border-white/[0.055] bg-black/70 px-2 py-1 text-[6.5px] uppercase tracking-[0.16em] text-[#cfcfcf] backdrop-blur-md">
-                    {String(index + 1).padStart(2, "0")}
-                  </div>
+                  <div className="flex items-center gap-3">
+                    <div className="relative h-[74px] w-[74px] shrink-0 overflow-hidden rounded-xl border border-white/[0.045] bg-black/50">
+                      {friend.image_url ? (
+                        <img
+                          src={friend.image_url}
+                          alt={friend.name}
+                          className="h-full w-full object-cover grayscale opacity-72 transition-all duration-1000 group-hover:scale-[1.05] group-hover:opacity-95"
+                        />
+                      ) : (
+                        <div className="flex h-full w-full items-center justify-center text-[#666666]">
+                          <Monitor size={16} strokeWidth={1.5} />
+                        </div>
+                      )}
 
-                  <div className="relative aspect-[4/5] w-full overflow-hidden">
-                    {friend.image_url ? (
-                      <img
-                        src={friend.image_url}
-                        alt={friend.name}
-                        className="h-full w-full object-cover grayscale opacity-70 transition-all duration-1000 group-hover:scale-[1.04] group-hover:opacity-92"
-                      />
-                    ) : (
-                      <div className="flex h-full w-full items-center justify-center bg-white/[0.02] text-[#666666]">
-                        <Monitor size={18} strokeWidth={1.5} />
-                      </div>
-                    )}
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/45 via-transparent to-transparent" />
+                    </div>
 
-                    <div className="absolute inset-0 bg-gradient-to-t from-black via-black/20 to-transparent" />
+                    <div className="min-w-0 flex-1">
+                      <div className="mb-2 flex items-center justify-between gap-2">
+                        <div className="flex min-w-0 items-center gap-1.5 text-[5.8px] uppercase tracking-[0.16em] text-[#9a9a9a]">
+                          <Box size={8} strokeWidth={1.5} />
+                          <span className="truncate">
+                            @{upperClean(friend.name, "PLAYER")}
+                          </span>
+                        </div>
 
-                    <div className="absolute bottom-0 left-0 right-0 z-20 border-t border-white/[0.055] bg-black/82 px-5 py-5 backdrop-blur-md transition-all duration-700 group-hover:bg-black/88 sm:px-6 sm:py-6">
-                      <div className="mb-2 flex items-center gap-1.5 text-[6.2px] uppercase tracking-[0.16em] text-[#9d9d9d]">
-                        <Box size={9} strokeWidth={1.5} />
-
-                        <span className="truncate">
-                          @{upperClean(friend.name, "PLAYER")}
+                        <span className="rounded-full border border-white/[0.055] bg-black/45 px-1.5 py-0.5 text-[5.5px] uppercase tracking-[0.14em] text-[#888888]">
+                          {String(index + 1).padStart(2, "0")}
                         </span>
                       </div>
 
-                      <h3 className="line-clamp-2 text-[11px] font-light uppercase leading-snug tracking-[0.07em] text-white/90 sm:text-[11.5px]">
+                      <h3 className="line-clamp-1 text-[10px] font-light uppercase leading-snug tracking-[0.08em] text-white/90">
                         {upperClean(friend.title, "UNTITLED")}
                       </h3>
+
+                      <p className="mt-1.5 line-clamp-2 text-[8.2px] leading-relaxed text-[#777777]">
+                        {lowerClean(
+                          friend.short_character_summary ||
+                            friend.description,
+                          "a quiet player that stayed somewhere inside the lobby."
+                        )}
+                      </p>
+
+                      <div className="mt-2 flex items-center justify-between border-t border-white/[0.04] pt-2">
+                        <span className="text-[5.8px] uppercase tracking-[0.16em] text-[#555555]">
+                          open chat
+                        </span>
+
+                        <ChevronRight
+                          size={10}
+                          strokeWidth={1.5}
+                          className="text-[#666666] transition-all duration-700 group-hover:translate-x-0.5 group-hover:text-white/80"
+                        />
+                      </div>
                     </div>
                   </div>
                 </button>
@@ -338,6 +440,8 @@ export default function RobloxEncounterPage() {
           clean={clean}
           upperClean={upperClean}
           lowerClean={lowerClean}
+          getSpotifyEmbedUrl={getSpotifyEmbedUrl}
+          typingText={typingText}
           onClose={() => setSelected(null)}
         />
       )}
@@ -358,17 +462,22 @@ function EncounterModal({
   clean,
   upperClean,
   lowerClean,
+  getSpotifyEmbedUrl,
+  typingText,
   onClose,
 }: {
   selected: Encounter;
   clean: (text?: string) => string;
   upperClean: (text?: string, fallback?: string) => string;
   lowerClean: (text?: string, fallback?: string) => string;
+  getSpotifyEmbedUrl: (url?: string) => string;
+  typingText: string;
   onClose: () => void;
 }) {
   const avatar = selected.image_url;
   const playerName = upperClean(selected.name, "PLAYER");
   const title = upperClean(selected.title, "UNTITLED");
+  const spotifyEmbedUrl = getSpotifyEmbedUrl(selected.spotify_url);
   const traits = selected.personality_bullets?.filter(Boolean) || [];
 
   const traitSentence =
@@ -486,83 +595,94 @@ function EncounterModal({
             </div>
 
 
-            {(selected.matching_song || selected.movie_character) && (
-              <div className="mb-5 grid gap-4 md:grid-cols-2">
-                {selected.matching_song && (
-                  <a
-                    href={selected.spotify_url || "#"}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="group relative overflow-hidden rounded-3xl border border-white/[0.055] bg-gradient-to-br from-[#121212] via-[#0d0d0d] to-[#050505] p-5 transition-all duration-700 hover:border-white/12 hover:bg-white/[0.03]"
-                  >
-                    <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(255,255,255,0.06),transparent_55%)]" />
+            {(selected.spotify_url ||
+              selected.movie_character_image_url ||
+              selected.movie_reason) && (
+              <div className="mb-5 space-y-4">
+                {selected.spotify_url && (
+                  <>
+                    <div className="flex items-end gap-2">
+                      <ChatAvatar image={avatar} name={selected.name} small />
 
-                    <div className="relative z-10">
-                      <div className="mb-4 flex items-center justify-between">
-                        <div className="flex items-center gap-2 text-[#8d8d8d]">
-                          <Music2 size={12} />
-                          <p className="text-[8px] uppercase tracking-[0.22em]">
-                            soundtrack
-                          </p>
-                        </div>
+                      <div className="max-w-[84%] rounded-3xl rounded-bl-md border border-white/[0.055] bg-white/[0.025] px-5 py-4 shadow-[0_12px_30px_rgba(0,0,0,0.25)]">
+                        <p className="text-[9px] leading-relaxed tracking-[0.01em] text-[#d8d8d8] sm:text-[9.5px]">
+                          if i were a song, what would you leave playing for me?
+                        </p>
+                      </div>
+                    </div>
 
-                        {selected.spotify_url && (
-                          <ExternalLink
-                            size={11}
-                            className="text-[#666666] transition-colors duration-700 group-hover:text-white/80"
+                    <div className="flex justify-end">
+                      <div className="max-w-[92%] overflow-hidden rounded-3xl rounded-br-md border border-white/[0.075] bg-white/[0.06] px-3 py-3 shadow-[0_12px_30px_rgba(0,0,0,0.25)]">
+                        {spotifyEmbedUrl ? (
+                          <iframe
+                            title="spotify memory"
+                            src={spotifyEmbedUrl}
+                            width="100%"
+                            height="88"
+                            allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
+                            loading="lazy"
+                            className="block min-w-[250px] rounded-2xl border-0 grayscale opacity-55 transition-opacity duration-700 hover:opacity-85"
                           />
+                        ) : (
+                          <a
+                            href={selected.spotify_url}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="flex min-w-[230px] items-center justify-between gap-3 rounded-2xl border border-white/[0.045] bg-black/30 px-4 py-3 text-[8px] uppercase tracking-[0.18em] text-[#888888] transition-colors hover:text-white"
+                          >
+                            <span className="truncate">open the song</span>
+                            <ExternalLink size={10} />
+                          </a>
                         )}
                       </div>
-
-                      <p className="text-[13px] leading-relaxed text-white/85">
-                        {lowerClean(selected.matching_song)}
-                      </p>
-
-                      <p className="mt-3 text-[9px] leading-relaxed text-[#666666]">
-                        this song somehow feels like the way u stayed in my memory.
-                      </p>
                     </div>
-                  </a>
+                  </>
                 )}
 
-                {selected.movie_character && (
-                  <a
-                    href={selected.tmdb_url || "#"}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="group relative overflow-hidden rounded-3xl border border-white/[0.055] bg-white/[0.02] p-5 transition-all duration-700 hover:border-white/12 hover:bg-white/[0.03]"
-                  >
-                    <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(255,255,255,0.04),transparent_55%)]" />
+                {selected.movie_character_image_url && (
+                  <>
+                    <div className="flex items-end gap-2">
+                      <ChatAvatar image={avatar} name={selected.name} small />
 
-                    <div className="relative z-10">
-                      <div className="mb-4 flex items-center justify-between">
-                        <div className="flex items-center gap-2 text-[#8d8d8d]">
-                          <Film size={12} />
-                          <p className="text-[8px] uppercase tracking-[0.22em]">
-                            movie feeling
-                          </p>
-                        </div>
-
-                        {selected.tmdb_url && (
-                          <ExternalLink
-                            size={11}
-                            className="text-[#666666] transition-colors duration-700 group-hover:text-white/80"
-                          />
-                        )}
+                      <div className="max-w-[84%] rounded-3xl rounded-bl-md border border-white/[0.055] bg-white/[0.025] px-5 py-4 shadow-[0_12px_30px_rgba(0,0,0,0.25)]">
+                        <p className="text-[9px] leading-relaxed tracking-[0.01em] text-[#d8d8d8] sm:text-[9.5px]">
+                          if i belonged to another story, who would i be there?
+                        </p>
                       </div>
-
-                      <p className="text-[13px] leading-relaxed text-white/85">
-                        {lowerClean(selected.movie_character)}
-                      </p>
-
-                      <p className="mt-3 text-[9px] leading-relaxed text-[#777777]">
-                        {lowerClean(
-                          selected.movie_reason,
-                          "u reminded me of a quiet character that stayed longer than expected."
-                        )}
-                      </p>
                     </div>
-                  </a>
+
+                    <div className="flex justify-end">
+                      <div className="max-w-[76%] overflow-hidden rounded-3xl rounded-br-md border border-white/[0.075] bg-white/[0.06] p-2 shadow-[0_12px_30px_rgba(0,0,0,0.25)]">
+                        <img
+                          src={selected.movie_character_image_url}
+                          alt="character answer"
+                          className="max-h-[250px] w-full rounded-[1.35rem] object-cover grayscale opacity-85"
+                        />
+                      </div>
+                    </div>
+                  </>
+                )}
+
+                {selected.movie_reason && (
+                  <>
+                    <div className="flex items-end gap-2">
+                      <ChatAvatar image={avatar} name={selected.name} small />
+
+                      <div className="max-w-[84%] rounded-3xl rounded-bl-md border border-white/[0.055] bg-white/[0.025] px-5 py-4 shadow-[0_12px_30px_rgba(0,0,0,0.25)]">
+                        <p className="text-[9px] leading-relaxed tracking-[0.01em] text-[#d8d8d8] sm:text-[9.5px]">
+                          why does that feel like me?
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="flex justify-end">
+                      <div className="max-w-[84%] rounded-3xl rounded-br-md border border-white/[0.075] bg-white/[0.06] px-5 py-4 shadow-[0_12px_30px_rgba(0,0,0,0.25)]">
+                        <p className="text-right text-[9.5px] leading-relaxed tracking-[0.01em] text-[#eeeeee] sm:text-[10px]">
+                          {lowerClean(selected.movie_reason)}
+                        </p>
+                      </div>
+                    </div>
+                  </>
                 )}
               </div>
             )}
@@ -595,12 +715,13 @@ function EncounterModal({
 
           <div className="border-t border-white/[0.055] bg-white/[0.018] px-5 py-4 sm:px-6">
             <div className="mb-2 rounded-2xl border border-white/[0.045] bg-black/25 px-4 py-3 text-[8px] tracking-[0.08em] text-[#777777]">
-              chat window closed, but the words are still here.
+              the chat keeps almost saying something.
             </div>
 
             <div className="flex items-center gap-3 rounded-full border border-white/[0.055] bg-black/35 px-4 py-3 text-[#666666]">
-              <span className="flex-1 text-[8px] tracking-[0.08em]">
-                type something that will never be sent...
+              <span className="min-h-[12px] flex-1 text-[8px] tracking-[0.08em]">
+                {typingText}
+                <span className="ml-0.5 inline-block h-3 w-px translate-y-0.5 animate-pulse bg-white/35" />
               </span>
 
               <button
@@ -735,7 +856,7 @@ const EmptyServer = () => (
     <Cloud size={16} strokeWidth={1.5} className="mb-3 opacity-60" />
 
     <p className="text-[8px] uppercase tracking-[0.22em]">
-      the server is empty
+      no saved lobby was loaded
     </p>
   </div>
 );

@@ -15,6 +15,7 @@ import {
   CloudRain,
   ChevronDown,
   ChevronUp,
+  Loader2,
 } from "lucide-react";
 import { Inter } from "next/font/google";
 
@@ -57,6 +58,7 @@ export default function MusicAdminPage() {
   const router = useRouter();
 
   const [songs, setSongs] = useState<Song[]>([]);
+  const [authLoading, setAuthLoading] = useState(true);
   const [visibleCount, setVisibleCount] = useState(COLLAPSE_SIZE);
   const [rainDrops, setRainDrops] = useState<RainDrop[]>([]);
   const [footerText, setFooterText] = useState(footerLines[0]);
@@ -64,6 +66,38 @@ export default function MusicAdminPage() {
   const visibleSongs = songs.slice(0, visibleCount);
   const hasMore = visibleCount < songs.length;
   const expanded = songs.length > 0 && visibleCount >= songs.length;
+
+  useEffect(() => {
+    const checkSession = async () => {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+
+      if (!session) {
+        router.replace("/admin");
+        return;
+      }
+
+      setAuthLoading(false);
+    };
+
+    checkSession();
+
+    const { data: listener } = supabase.auth.onAuthStateChange(
+      (_event, session) => {
+        if (!session) {
+          router.replace("/admin");
+          return;
+        }
+
+        setAuthLoading(false);
+      }
+    );
+
+    return () => {
+      listener.subscription.unsubscribe();
+    };
+  }, [router]);
 
   useEffect(() => {
     setFooterText(footerLines[Math.floor(Math.random() * footerLines.length)]);
@@ -92,8 +126,8 @@ export default function MusicAdminPage() {
   };
 
   useEffect(() => {
-    fetchSongs();
-  }, []);
+    if (!authLoading) fetchSongs();
+  }, [authLoading]);
 
   const deleteSong = async (id: number) => {
     if (!confirm("Remove this song from the archive?")) return;
@@ -123,6 +157,14 @@ export default function MusicAdminPage() {
     setVisibleCount((prev) => Math.min(prev + COLLAPSE_SIZE, songs.length));
   };
 
+  if (authLoading) {
+    return (
+      <main className="flex min-h-screen items-center justify-center bg-[#020202] text-white">
+        <Loader2 size={18} strokeWidth={1.5} className="animate-spin" />
+      </main>
+    );
+  }
+
   return (
     <main
       className={`${inter.className} relative min-h-screen overflow-x-hidden bg-[#020202] text-[#b7b7b7] font-light text-[13px] antialiased selection:bg-white/10 selection:text-white`}
@@ -130,10 +172,10 @@ export default function MusicAdminPage() {
       <Background rainDrops={rainDrops} />
 
       <nav className="fixed left-0 right-0 top-0 z-[60] border-b border-white/[0.045] bg-[#020202]/72 backdrop-blur-xl">
-        <div className="mx-auto flex max-w-[1500px] items-center justify-between gap-4 px-6 py-5 sm:px-12 md:px-20 lg:px-28 xl:px-36">
+        <div className="mx-auto flex max-w-[1500px] items-center justify-between gap-3 px-5 py-4 sm:px-8 sm:py-5 md:px-20 lg:px-28 xl:px-36">
           <button
             onClick={() => router.back()}
-            className="group flex shrink-0 items-center gap-2 text-[8.5px] uppercase tracking-[0.22em] text-[#666666] transition-colors duration-700 hover:text-white/80 sm:text-[9px]"
+            className="group hidden shrink-0 items-center gap-2 text-[8.5px] uppercase tracking-[0.22em] text-[#666666] transition-colors duration-700 hover:text-white/80 md:flex md:text-[9px]"
           >
             <ArrowLeft
               size={12}
@@ -145,22 +187,22 @@ export default function MusicAdminPage() {
 
           <button
             onClick={() => router.push("/")}
-            className="group flex min-w-0 flex-col items-center text-center"
+            className="group mr-auto flex min-w-0 flex-col items-start text-left md:mr-0 md:items-center md:text-center"
           >
             <span className="text-[10px] font-medium uppercase tracking-[0.24em] text-white/80 sm:text-[11px]">
               strange clause
             </span>
 
-            <span className="hidden max-w-[320px] truncate text-[8px] lowercase tracking-[0.12em] text-[#666666] transition-colors duration-500 group-hover:text-white/60 sm:block">
+            <span className="block max-w-[220px] truncate text-[7px] lowercase tracking-[0.12em] text-[#666666] transition-colors duration-500 group-hover:text-white/60 sm:max-w-[320px] sm:text-[8px]">
               quiet music
             </span>
           </button>
 
-          <div className="w-[48px]" />
+          <div className="hidden w-[48px] md:block" />
         </div>
       </nav>
 
-      <div className="relative z-20 mx-auto max-w-[1500px] px-6 pb-24 pt-36 sm:px-12 md:px-20 md:pt-44 lg:px-28 xl:px-36">
+      <div className="relative z-20 mx-auto max-w-[1500px] px-5 pb-20 pt-28 sm:px-8 sm:pt-36 md:px-20 md:pt-44 lg:px-28 xl:px-36">
         <header className="animate-fade-in mb-12 grid grid-cols-1 items-end gap-6 lg:grid-cols-[1.1fr_0.9fr]">
           <div className="max-w-2xl space-y-5">
             <div className="flex items-center gap-2">

@@ -10,9 +10,12 @@ import {
   Trash2,
   CloudRain,
   Sparkles,
-  Ghost,
   MessageCircle,
   Send,
+  Music2,
+  Image as ImageIcon,
+  Video,
+  Upload,
 } from "lucide-react";
 import { Inter } from "next/font/google";
 
@@ -29,6 +32,10 @@ type AboutProfile = {
   footer_text: string;
   spotify_url: string;
   discord_url: string;
+  audio_url: string;
+  self_image_url: string;
+  self_videos: { title: string; url: string }[];
+  video_password: string;
   note_title: string;
   note_text: string;
   favorite_colors: { name: string; color: string }[];
@@ -49,6 +56,12 @@ type RainDrop = {
   duration: string;
 };
 
+type FavoriteItem = {
+  title: string;
+  image_url: string;
+  link: string;
+};
+
 const emptyProfile: AboutProfile = {
   id: 1,
   page_badge: "thunderstorm",
@@ -57,6 +70,10 @@ const emptyProfile: AboutProfile = {
   footer_text: "nothing too private, just the little things that keep showing up.",
   spotify_url: "https://open.spotify.com/",
   discord_url: "https://discord.com/",
+  audio_url: "",
+  self_image_url: "",
+  self_videos: [],
+  video_password: "163479",
   note_title: "not a biography",
   note_text:
     "i like pages that feel quiet, colors that look warm in the dark, and music that sounds like someone stayed in the room a little longer.",
@@ -123,6 +140,9 @@ export default function AboutMeAdminPage() {
   const [rainDrops, setRainDrops] = useState<RainDrop[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [uploadingKey, setUploadingKey] = useState("");
+  const [userEmail, setUserEmail] = useState<string | null>(null);
+  const [authLoading, setAuthLoading] = useState(true);
 
   useEffect(() => {
     const drops: RainDrop[] = Array.from({ length: 20 }).map(() => ({
@@ -137,6 +157,43 @@ export default function AboutMeAdminPage() {
   useEffect(() => {
     fetchProfile();
   }, []);
+
+  useEffect(() => {
+    const initAuth = async () => {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+
+      const email = session?.user?.email || null;
+
+      if (!email) {
+        router.replace("/admin");
+        setAuthLoading(false);
+        return;
+      }
+
+      setUserEmail(email);
+      setAuthLoading(false);
+    };
+
+    initAuth();
+
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, session) => {
+      const email = session?.user?.email || null;
+
+      setUserEmail(email);
+
+      if (!email) {
+        router.replace("/admin");
+      }
+    });
+
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, [router]);
 
   const fetchProfile = async () => {
     setLoading(true);
@@ -168,6 +225,10 @@ export default function AboutMeAdminPage() {
         favorite_movies: data.favorite_movies || emptyProfile.favorite_movies,
         favorite_series: data.favorite_series || emptyProfile.favorite_series,
         favorite_anime: data.favorite_anime || emptyProfile.favorite_anime,
+        audio_url: data.audio_url || emptyProfile.audio_url,
+        self_image_url: data.self_image_url || emptyProfile.self_image_url,
+        self_videos: data.self_videos || emptyProfile.self_videos,
+        video_password: data.video_password || emptyProfile.video_password,
       });
     }
 
@@ -181,6 +242,68 @@ export default function AboutMeAdminPage() {
     setProfile((prev) => ({ ...prev, [key]: value }));
   };
 
+  const uploadToAboutMedia = async (file: File, folder: string) => {
+    const fileExt = file.name.split(".").pop() || "file";
+    const fileName = `${folder}/${Date.now()}-${crypto.randomUUID()}.${fileExt}`;
+
+    const { error } = await supabase.storage
+      .from("about-media")
+      .upload(fileName, file, { upsert: false });
+
+    if (error) throw error;
+
+    const { data } = supabase.storage.from("about-media").getPublicUrl(fileName);
+
+    return data.publicUrl;
+  };
+
+  const handleAudioUpload = async (file?: File) => {
+    if (!file) return;
+
+    try {
+      setUploadingKey("audio");
+      const publicUrl = await uploadToAboutMedia(file, "audio");
+      updateField("audio_url", publicUrl);
+    } catch (error) {
+      console.error("failed to upload audio:", error);
+      alert("failed to upload audio");
+    } finally {
+      setUploadingKey("");
+    }
+  };
+
+  const handleImageUpload = async (file?: File) => {
+    if (!file) return;
+
+    try {
+      setUploadingKey("image");
+      const publicUrl = await uploadToAboutMedia(file, "images");
+      updateField("self_image_url", publicUrl);
+    } catch (error) {
+      console.error("failed to upload image:", error);
+      alert("failed to upload image");
+    } finally {
+      setUploadingKey("");
+    }
+  };
+
+  const handleVideoUpload = async (file: File | undefined, index: number) => {
+    if (!file) return;
+
+    try {
+      setUploadingKey(`video-${index}`);
+      const publicUrl = await uploadToAboutMedia(file, "videos");
+      const next = [...profile.self_videos];
+      next[index] = { ...next[index], url: publicUrl };
+      updateField("self_videos", next);
+    } catch (error) {
+      console.error("failed to upload video:", error);
+      alert("failed to upload video");
+    } finally {
+      setUploadingKey("");
+    }
+  };
+
   const saveProfile = async () => {
     setSaving(true);
 
@@ -191,6 +314,10 @@ export default function AboutMeAdminPage() {
       footer_text: profile.footer_text,
       spotify_url: profile.spotify_url,
       discord_url: profile.discord_url,
+      audio_url: profile.audio_url,
+      self_image_url: profile.self_image_url,
+      self_videos: profile.self_videos,
+      video_password: profile.video_password,
       note_title: profile.note_title,
       note_text: profile.note_text,
       favorite_colors: profile.favorite_colors,
@@ -215,7 +342,7 @@ export default function AboutMeAdminPage() {
     setSaving(false);
   };
 
-  if (loading) {
+  if (authLoading || loading) {
     return (
       <main
         className={`${inter.className} flex min-h-screen items-center justify-center bg-[#020202] text-[#666666]`}
@@ -232,10 +359,10 @@ export default function AboutMeAdminPage() {
       <Background rainDrops={rainDrops} />
 
       <nav className="fixed left-0 right-0 top-0 z-[60] border-b border-white/[0.045] bg-[#020202]/72 backdrop-blur-xl">
-        <div className="mx-auto flex max-w-[1500px] items-center justify-between gap-4 px-6 py-5 sm:px-12 md:px-20 lg:px-28 xl:px-36">
+        <div className="mx-auto grid max-w-[1500px] grid-cols-[1fr_auto] items-center gap-3 px-5 py-4 sm:px-8 sm:py-5 md:grid-cols-[1fr_auto_1fr] md:px-20 lg:px-28 xl:px-36">
           <button
             onClick={() => router.back()}
-            className="group flex shrink-0 items-center gap-2 text-[8.5px] uppercase tracking-[0.22em] text-[#666666] transition-colors duration-700 hover:text-white/80 sm:text-[9px]"
+            className="group hidden shrink-0 items-center gap-2 justify-self-start text-[8.5px] uppercase tracking-[0.22em] text-[#666666] transition-colors duration-700 hover:text-white/80 md:flex md:text-[9px]"
           >
             <ArrowLeft size={12} strokeWidth={1.5} />
             leave
@@ -243,18 +370,18 @@ export default function AboutMeAdminPage() {
 
           <button
             onClick={() => router.push("/about-me")}
-            className="group flex min-w-0 flex-col items-center text-center"
+            className="group col-start-1 row-start-1 flex min-w-0 flex-col items-start justify-self-start text-left md:col-start-2 md:items-center md:justify-self-center md:text-center"
           >
             <span className="text-[10px] font-medium uppercase tracking-[0.24em] text-white/80 sm:text-[11px]">
               strange clause
             </span>
 
-            <span className="hidden max-w-[320px] truncate text-[8px] lowercase tracking-[0.12em] text-[#666666] transition-colors duration-500 group-hover:text-white/60 sm:block">
+            <span className="block max-w-[220px] truncate text-[7px] lowercase tracking-[0.12em] text-[#666666] transition-colors duration-500 group-hover:text-white/60 sm:max-w-[320px] sm:text-[8px]">
               the room owner
             </span>
           </button>
 
-          <div className="w-[48px]" />
+          <div className="hidden md:block" aria-hidden="true" />
         </div>
       </nav>
 
@@ -301,9 +428,148 @@ export default function AboutMeAdminPage() {
           <Textarea label="footer text" value={profile.footer_text} onChange={(value) => updateField("footer_text", value)} />
         </AdminSection>
 
-        <AdminSection title="links">
-          <Input label="spotify url" value={profile.spotify_url} onChange={(value) => updateField("spotify_url", value)} />
-          <Input label="discord url" value={profile.discord_url} onChange={(value) => updateField("discord_url", value)} />
+        <AdminSection title="links and media">
+          <Input
+            label="spotify url"
+            value={profile.spotify_url}
+            onChange={(value) => updateField("spotify_url", value)}
+          />
+
+          <Input
+            label="discord url"
+            value={profile.discord_url}
+            onChange={(value) => updateField("discord_url", value)}
+          />
+
+          <div className="grid gap-4 md:grid-cols-2">
+            <UploadInputCard
+              icon="music"
+              title="page audio"
+              subtitle="upload mp3 / wav / m4a for now playing"
+              value={profile.audio_url}
+              placeholder="audio url"
+              accept="audio/*"
+              uploading={uploadingKey === "audio"}
+              onUpload={(file) => handleAudioUpload(file)}
+              onChange={(value) => updateField("audio_url", value)}
+            />
+
+            <UploadInputCard
+              icon="image"
+              title="locked image"
+              subtitle="upload image hidden behind password"
+              value={profile.self_image_url}
+              placeholder="image url"
+              accept="image/*"
+              uploading={uploadingKey === "image"}
+              onUpload={(file) => handleImageUpload(file)}
+              onChange={(value) => updateField("self_image_url", value)}
+            />
+          </div>
+
+          <Input
+            label="media password"
+            value={profile.video_password}
+            onChange={(value) => updateField("video_password", value)}
+          />
+
+          <div className="rounded-3xl border border-white/[0.045] bg-white/[0.01] p-4">
+            <div className="mb-3 flex items-center justify-between gap-3 border-b border-white/[0.045] pb-3">
+              <div className="flex items-center gap-2">
+                <Video size={11} strokeWidth={1.5} className="text-[#777777]" />
+                <p className="text-[8px] uppercase tracking-[0.22em] text-white/75">
+                  locked videos
+                </p>
+              </div>
+
+              <button
+                type="button"
+                onClick={() =>
+                  updateField("self_videos", [
+                    ...profile.self_videos,
+                    { title: "", url: "" },
+                  ])
+                }
+                className="rounded-full border border-white/[0.055] bg-white/[0.025] px-3 py-1.5 text-[7px] uppercase tracking-[0.18em] text-[#777777] transition-all duration-700 hover:border-white/15 hover:bg-white/[0.04] hover:text-white"
+              >
+                add
+              </button>
+            </div>
+
+            <div className="grid gap-3">
+              {profile.self_videos.map((video, index) => (
+                <div
+                  key={index}
+                  className="grid gap-3 rounded-2xl border border-white/[0.055] bg-white/[0.016] p-3 md:grid-cols-[1fr_1.5fr_40px]"
+                >
+                  <Input
+                    label="video title"
+                    value={video.title}
+                    onChange={(value) => {
+                      const next = [...profile.self_videos];
+                      next[index] = { ...next[index], title: value };
+                      updateField("self_videos", next);
+                    }}
+                  />
+
+                  <div className="space-y-3">
+                    <Input
+                      label="video url"
+                      value={video.url}
+                      onChange={(value) => {
+                        const next = [...profile.self_videos];
+                        next[index] = { ...next[index], url: value };
+                        updateField("self_videos", next);
+                      }}
+                    />
+
+                    <label className="flex cursor-pointer items-center justify-between gap-3 rounded-2xl border border-dashed border-white/[0.055] bg-black/25 px-4 py-3 transition-all duration-700 hover:border-white/15 hover:bg-white/[0.035]">
+                      <div>
+                        <p className="text-[7px] uppercase tracking-[0.18em] text-[#777777]">
+                          {uploadingKey === `video-${index}` ? "uploading" : "upload video"}
+                        </p>
+                        <p className="mt-1 text-[7px] uppercase tracking-[0.12em] text-[#555555]">
+                          mp4 / mov / webm
+                        </p>
+                      </div>
+
+                      {uploadingKey === `video-${index}` ? (
+                        <Loader2 size={13} className="animate-spin text-[#777777]" />
+                      ) : (
+                        <Upload size={13} className="text-[#777777]" />
+                      )}
+
+                      <input
+                        type="file"
+                        hidden
+                        accept="video/*"
+                        onChange={(event) =>
+                          handleVideoUpload(event.target.files?.[0], index)
+                        }
+                      />
+                    </label>
+
+                    {video.url && (
+                      <video
+                        src={video.url}
+                        controls
+                        className="max-h-[180px] w-full rounded-2xl border border-white/[0.045] bg-black object-cover opacity-75 grayscale"
+                      />
+                    )}
+                  </div>
+
+                  <RemoveButton
+                    onClick={() =>
+                      updateField(
+                        "self_videos",
+                        profile.self_videos.filter((_, i) => i !== index)
+                      )
+                    }
+                  />
+                </div>
+              ))}
+            </div>
+          </div>
         </AdminSection>
 
         <AdminSection title="bubble chat">
@@ -633,7 +899,7 @@ export default function AboutMeAdminPage() {
 
       <button
         onClick={saveProfile}
-        disabled={saving}
+        disabled={saving || !!uploadingKey}
         className="fixed bottom-7 right-7 z-[70] flex items-center gap-2 rounded-full border border-white/[0.055] bg-[#0a0a0a]/88 px-5 py-3 text-[8px] uppercase tracking-[0.22em] text-[#d0d0d0] shadow-[0_14px_40px_rgba(0,0,0,0.5)] backdrop-blur-xl transition-all duration-700 hover:-translate-y-0.5 hover:border-white/[0.12] hover:bg-white/[0.05] hover:text-white disabled:opacity-40"
       >
         {saving ? (
@@ -645,7 +911,6 @@ export default function AboutMeAdminPage() {
         {saving ? "sending..." : "release"}
       </button>
 
-
       <footer className="relative z-20 border-t border-white/[0.045] bg-[#020202]/90 px-6 py-16 text-center backdrop-blur-xl sm:px-12">
         <p className="mx-auto max-w-xl text-[10.5px] leading-relaxed tracking-[0.12em] text-[#555555]">
           {profile.footer_text}
@@ -656,6 +921,92 @@ export default function AboutMeAdminPage() {
     </main>
   );
 }
+
+const UploadInputCard = ({
+  icon,
+  title,
+  subtitle,
+  value,
+  placeholder,
+  accept,
+  uploading,
+  onUpload,
+  onChange,
+}: {
+  icon: "music" | "image";
+  title: string;
+  subtitle: string;
+  value: string;
+  placeholder: string;
+  accept: string;
+  uploading: boolean;
+  onUpload: (file?: File) => void;
+  onChange: (value: string) => void;
+}) => (
+  <div className="rounded-3xl border border-white/[0.045] bg-white/[0.01] p-4">
+    <div className="mb-3 flex items-center gap-2 border-b border-white/[0.045] pb-3">
+      {icon === "music" ? (
+        <Music2 size={11} strokeWidth={1.5} className="text-[#777777]" />
+      ) : (
+        <ImageIcon size={11} strokeWidth={1.5} className="text-[#777777]" />
+      )}
+
+      <div>
+        <p className="text-[8px] uppercase tracking-[0.22em] text-white/75">
+          {title}
+        </p>
+        <p className="mt-1 text-[7px] uppercase tracking-[0.14em] text-[#555555]">
+          {subtitle}
+        </p>
+      </div>
+    </div>
+
+    <label className="mb-3 flex cursor-pointer items-center justify-between gap-3 rounded-2xl border border-dashed border-white/[0.055] bg-black/25 px-4 py-3 transition-all duration-700 hover:border-white/15 hover:bg-white/[0.035]">
+      <div>
+        <p className="text-[7px] uppercase tracking-[0.18em] text-[#777777]">
+          {uploading ? "uploading" : "upload file"}
+        </p>
+        <p className="mt-1 text-[7px] uppercase tracking-[0.12em] text-[#555555]">
+          {accept.replace("/*", "")}
+        </p>
+      </div>
+
+      {uploading ? (
+        <Loader2 size={13} className="animate-spin text-[#777777]" />
+      ) : (
+        <Upload size={13} className="text-[#777777]" />
+      )}
+
+      <input
+        type="file"
+        hidden
+        accept={accept}
+        onChange={(event) => onUpload(event.target.files?.[0])}
+      />
+    </label>
+
+    <input
+      value={value || ""}
+      onChange={(event) => onChange(event.target.value)}
+      placeholder={placeholder}
+      className="w-full border-b border-white/[0.08] bg-transparent py-2 text-[9px] uppercase tracking-[0.16em] text-[#d0d0d0] outline-none placeholder:text-[#555555] focus:border-white/20"
+    />
+
+    {value && icon === "image" && (
+      <div className="mt-3 overflow-hidden rounded-2xl border border-white/[0.045] bg-black/25">
+        <img
+          src={value}
+          alt={title}
+          className="max-h-[180px] w-full object-cover grayscale opacity-75"
+        />
+      </div>
+    )}
+
+    {value && icon === "music" && (
+      <audio src={value} controls className="mt-3 w-full opacity-70 grayscale" />
+    )}
+  </div>
+);
 
 const AdminSection = ({
   title,
@@ -745,13 +1096,6 @@ const RemoveButton = ({ onClick }: { onClick: () => void }) => (
     <Trash2 size={11} />
   </button>
 );
-
-
-type FavoriteItem = {
-  title: string;
-  image_url: string;
-  link: string;
-};
 
 const FavoriteShelf = ({
   title,
@@ -851,7 +1195,6 @@ const FavoriteShelf = ({
     </div>
   </div>
 );
-
 
 function Background({ rainDrops }: { rainDrops: RainDrop[] }) {
   return (

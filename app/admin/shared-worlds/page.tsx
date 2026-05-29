@@ -3,8 +3,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "../../../lib/supabase";
 import {
-  Save,
   Upload,
+  Send,
   User,
   Globe,
   MessageSquare,
@@ -49,6 +49,7 @@ type Encounter = {
   matching_song?: string;
   spotify_url?: string;
   movie_character?: string;
+  movie_character_image_url?: string;
   tmdb_url?: string;
   movie_reason?: string;
 };
@@ -68,8 +69,11 @@ export default function RobloxAdminPage() {
   const [modalOpen, setModalOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [file, setFile] = useState<File | null>(null);
+  const [characterFile, setCharacterFile] = useState<File | null>(null);
   const [visibleCount, setVisibleCount] = useState(COLLAPSE_SIZE);
   const [rainDrops, setRainDrops] = useState<RainDrop[]>([]);
+  const [userEmail, setUserEmail] = useState<string | null>(null);
+  const [authLoading, setAuthLoading] = useState(true);
 
   const [title, setTitle] = useState("");
   const [name, setName] = useState("");
@@ -86,6 +90,7 @@ export default function RobloxAdminPage() {
   const [matchingSong, setMatchingSong] = useState("");
   const [spotifyUrl, setSpotifyUrl] = useState("");
   const [movieCharacter, setMovieCharacter] = useState("");
+  const [movieCharacterImage, setMovieCharacterImage] = useState("");
   const [tmdbUrl, setTmdbUrl] = useState("");
   const [movieReason, setMovieReason] = useState("");
   const [existingImage, setExistingImage] = useState("");
@@ -115,6 +120,28 @@ export default function RobloxAdminPage() {
   const inputStyle =
     "w-full border-b border-white/[0.08] bg-transparent py-2.5 text-[9px] uppercase tracking-[0.18em] text-[#d0d0d0] outline-none placeholder:text-[#666666] focus:border-white/25";
 
+  const getSpotifyEmbedUrl = (url: string) => {
+    if (!url.trim()) return "";
+
+    const trackMatch = url.match(/open\.spotify\.com\/track\/([a-zA-Z0-9]+)/);
+    const episodeMatch = url.match(/open\.spotify\.com\/episode\/([a-zA-Z0-9]+)/);
+    const playlistMatch = url.match(/open\.spotify\.com\/playlist\/([a-zA-Z0-9]+)/);
+
+    if (trackMatch?.[1]) {
+      return `https://open.spotify.com/embed/track/${trackMatch[1]}?utm_source=generator&theme=0`;
+    }
+
+    if (episodeMatch?.[1]) {
+      return `https://open.spotify.com/embed/episode/${episodeMatch[1]}?utm_source=generator&theme=0`;
+    }
+
+    if (playlistMatch?.[1]) {
+      return `https://open.spotify.com/embed/playlist/${playlistMatch[1]}?utm_source=generator&theme=0`;
+    }
+
+    return url.includes("/embed/") ? url : url;
+  };
+
   const visibleItems = items.slice(0, visibleCount);
   const hasMore = visibleCount < items.length;
   const isExpanded = visibleCount >= items.length;
@@ -128,6 +155,36 @@ export default function RobloxAdminPage() {
 
     setRainDrops(drops);
   }, []);
+
+
+  useEffect(() => {
+    const checkUser = async () => {
+      const { data } = await supabase.auth.getUser();
+
+      setUserEmail(data.user?.email || null);
+      setAuthLoading(false);
+
+      if (!data.user?.email) {
+        router.replace("/admin");
+      }
+    };
+
+    checkUser();
+
+    const { data: listener } = supabase.auth.onAuthStateChange(
+      (_event, session) => {
+        setUserEmail(session?.user?.email || null);
+
+        if (!session?.user?.email) {
+          router.replace("/admin");
+        }
+      }
+    );
+
+    return () => {
+      listener.subscription.unsubscribe();
+    };
+  }, [router]);
 
   const showNotif = (type: "success" | "error", message: string) => {
     setNotif({ type, message });
@@ -163,11 +220,13 @@ export default function RobloxAdminPage() {
     setMatchingSong("");
     setSpotifyUrl("");
     setMovieCharacter("");
+    setMovieCharacterImage("");
     setTmdbUrl("");
     setMovieReason("");
     setExistingImage("");
     setEditId(null);
     setFile(null);
+    setCharacterFile(null);
   };
 
   const openNewModal = () => {
@@ -175,14 +234,15 @@ export default function RobloxAdminPage() {
     setModalOpen(true);
   };
 
-  const uploadImage = async (file: File) => {
-    const fileName = `${Date.now()}-${file.name}`;
+  const uploadImage = async (file: File, folder = "friends") => {
+    const fileExt = file.name.split(".").pop() || "png";
+    const fileName = `${folder}/${Date.now()}-${crypto.randomUUID()}.${fileExt}`;
 
     const { error } = await supabase.storage
       .from("roblox-images")
-      .upload(fileName, file);
+      .upload(fileName, file, { upsert: false });
 
-    if (error) return "";
+    if (error) throw error;
 
     const { data } = supabase.storage
       .from("roblox-images")
@@ -201,8 +261,12 @@ export default function RobloxAdminPage() {
 
     try {
       let image_url = existingImage;
+      let movie_character_image_url = movieCharacterImage;
 
-      if (file) image_url = await uploadImage(file);
+      if (file) image_url = await uploadImage(file, "friends");
+      if (characterFile) {
+        movie_character_image_url = await uploadImage(characterFile, "characters");
+      }
 
       const payload = {
         title,
@@ -217,10 +281,11 @@ export default function RobloxAdminPage() {
         personality_bullets: personality.split("\n").filter(Boolean),
         why_i_remember_them: whyRemember,
         short_character_summary: summary,
-        matching_song: matchingSong,
-        spotify_url: spotifyUrl,
-        movie_character: movieCharacter,
-        tmdb_url: tmdbUrl,
+        matching_song: "",
+        spotify_url: getSpotifyEmbedUrl(spotifyUrl),
+        movie_character: "",
+        movie_character_image_url,
+        tmdb_url: "",
         movie_reason: movieReason,
         image_url,
       };
@@ -263,10 +328,12 @@ export default function RobloxAdminPage() {
     setMatchingSong(item.matching_song || "");
     setSpotifyUrl(item.spotify_url || "");
     setMovieCharacter(item.movie_character || "");
+    setMovieCharacterImage(item.movie_character_image_url || "");
     setTmdbUrl(item.tmdb_url || "");
     setMovieReason(item.movie_reason || "");
     setExistingImage(item.image_url || "");
     setFile(null);
+    setCharacterFile(null);
     setModalOpen(true);
   };
 
@@ -298,6 +365,14 @@ export default function RobloxAdminPage() {
       ?.scrollIntoView({ behavior: "smooth", block: "start" });
   };
 
+  if (authLoading) {
+    return (
+      <main className="flex min-h-screen items-center justify-center bg-[#020202] text-white">
+        <Loader2 size={18} className="animate-spin" />
+      </main>
+    );
+  }
+
   return (
     <main
       className={`${inter.className} relative min-h-screen overflow-x-hidden bg-[#020202] text-[#b7b7b7] font-light text-[13px] antialiased selection:bg-white/10 selection:text-white`}
@@ -308,7 +383,7 @@ export default function RobloxAdminPage() {
         <div className="mx-auto flex max-w-[1500px] items-center justify-between gap-4 px-6 py-5 sm:px-12 md:px-20 lg:px-28 xl:px-36">
           <button
             onClick={() => router.push("/admin")}
-            className="group flex shrink-0 items-center gap-2 text-[8.5px] uppercase tracking-[0.22em] text-[#666666] transition-colors duration-700 hover:text-white/80 sm:text-[9px]"
+            className="group hidden shrink-0 items-center gap-2 text-[8.5px] uppercase tracking-[0.22em] text-[#666666] transition-colors duration-700 hover:text-white/80 md:flex md:text-[9px]"
           >
             <ArrowLeft
               size={12}
@@ -320,14 +395,14 @@ export default function RobloxAdminPage() {
 
           <button
             onClick={() => router.push("/")}
-            className="group flex min-w-0 flex-col items-center text-center"
+            className="group mr-auto flex min-w-0 flex-col items-start text-left md:mr-0 md:items-center md:text-center"
           >
             <span className="text-[10px] font-medium uppercase tracking-[0.24em] text-white/80 sm:text-[11px]">
               strange clause
             </span>
 
-            <span className="hidden max-w-[310px] truncate text-[8px] lowercase tracking-[0.12em] text-[#666666] transition-colors duration-500 group-hover:text-white/60 sm:block">
-              admin pixel memories kept behind rainy glass
+            <span className="block max-w-[220px] truncate text-[7px] lowercase tracking-[0.12em] text-[#666666] transition-colors duration-500 group-hover:text-white/60 sm:max-w-[310px] sm:text-[8px]">
+              shared worlds
             </span>
           </button>
 
@@ -357,7 +432,7 @@ export default function RobloxAdminPage() {
             <div className="flex items-center gap-2">
               <CloudRain size={12} className="text-[#666666] stroke-[1.4px]" />
               <p className="text-[9px] uppercase tracking-[0.24em] text-[#666666]">
-                admin / people in pixels
+                admin / shared worlds
               </p>
             </div>
 
@@ -366,11 +441,6 @@ export default function RobloxAdminPage() {
               <br />
               who made pixels warm.
             </h1>
-
-            <p className="max-w-lg text-[12.5px] leading-relaxed text-[#8f8f8f]">
-              Add, edit, or remove notes about Roblox friends, old maps, familiar
-              usernames, and tiny things worth remembering.
-            </p>
 
             <div className="flex items-center gap-2 text-[11px] italic text-[#777777]">
               <Ghost size={12} strokeWidth={1.5} />
@@ -388,10 +458,6 @@ export default function RobloxAdminPage() {
 
             <p className="text-[13px] text-white/80">
               {items.length} pixel memories saved
-            </p>
-
-            <p className="mt-3 text-[11px] leading-relaxed text-[#777777]">
-              Keep the cards small. Let each name stay like a quiet trace.
             </p>
           </aside>
         </header>
@@ -557,211 +623,396 @@ export default function RobloxAdminPage() {
       {modalOpen && (
         <div
           onClick={() => {
-            setModalOpen(false);
-            resetForm();
+            if (!loading) {
+              setModalOpen(false);
+              resetForm();
+            }
           }}
-          className="animate-modal fixed inset-0 z-[999] flex items-center justify-center bg-black/90 p-4 backdrop-blur-xl sm:p-5"
+          className="animate-modal fixed inset-0 z-[999] flex items-center justify-center bg-black/90 p-4 backdrop-blur-xl sm:p-6"
         >
           <div
             onClick={(e) => e.stopPropagation()}
-            className="scrollbar-hide relative max-h-[90vh] w-full max-w-3xl overflow-y-auto rounded-3xl border border-white/[0.06] bg-[#070707]/95 p-5 shadow-[0_30px_90px_rgba(0,0,0,0.75)] backdrop-blur-2xl sm:p-6 md:p-8"
+            className="modal-scroll relative max-h-[90vh] w-full max-w-3xl overflow-y-auto rounded-3xl border border-white/[0.06] bg-[#070707]/95 shadow-[0_30px_90px_rgba(0,0,0,0.75)] backdrop-blur-2xl"
           >
+            <div className="pointer-events-none absolute inset-x-10 top-0 h-px bg-gradient-to-r from-transparent via-white/12 to-transparent" />
+
             <button
               onClick={() => {
-                setModalOpen(false);
-                resetForm();
+                if (!loading) {
+                  setModalOpen(false);
+                  resetForm();
+                }
               }}
-              className="absolute right-5 top-5 text-[#666666] transition-colors duration-700 hover:text-white"
+              disabled={loading}
+              className="absolute right-5 top-5 z-30 text-[#666666] transition-colors duration-700 hover:text-white disabled:opacity-30"
             >
               <X size={14} />
             </button>
 
-            <div className="mb-7">
-              <p className="mb-2 text-[8px] uppercase tracking-[0.22em] text-[#777777]">
-                {editId ? "rewrite the ghost" : "new pixel memory"}
-              </p>
-
-              <h3 className="text-[24px] font-light leading-tight tracking-[-0.05em] text-white">
-                {editId ? "adjust what stayed." : "leave someone here."}
-              </h3>
-            </div>
-
-            <div className="grid gap-6 md:grid-cols-2">
-              <div className="space-y-4">
-                <div className="flex items-center gap-2 text-[#777777]">
-                  <User size={13} strokeWidth={1.5} />
-                  <p className="text-[8px] uppercase tracking-[0.22em]">
-                    identity
-                  </p>
+            <div className="px-5 pb-5 pt-6 sm:px-6">
+              <div className="mb-6 text-center">
+                <div className="mb-3 flex justify-center">
+                  <div className="rounded-full border border-white/[0.06] bg-white/[0.025] p-3 shadow-[0_0_24px_rgba(255,255,255,0.035)]">
+                    <User
+                      size={14}
+                      strokeWidth={1.5}
+                      className="text-[#d0d0d0]"
+                    />
+                  </div>
                 </div>
 
-                <input placeholder="archive title" value={title} onChange={(e) => setTitle(e.target.value)} className={inputStyle} />
-                <input placeholder="friend name" value={name} onChange={(e) => setName(e.target.value)} className={inputStyle} />
-                <input placeholder="short description" value={desc} onChange={(e) => setDesc(e.target.value)} className={inputStyle} />
-                <input placeholder="what i called them" value={howICalled} onChange={(e) => setHowICalled(e.target.value)} className={inputStyle} />
-                <input placeholder="what they called me" value={howTheyCalled} onChange={(e) => setHowTheyCalled(e.target.value)} className={inputStyle} />
+                <h2 className="text-[14px] font-light uppercase tracking-[0.22em] text-white/90">
+                  {editId ? "edit memory" : "add memory"}
+                </h2>
+
+                <p className="mx-auto mt-2 max-w-sm text-[11px] leading-relaxed text-[#777777]">
+                  keep the details small, clean, and easy to return to later.
+                </p>
               </div>
 
               <div className="space-y-4">
-                <div className="flex items-center gap-2 text-[#777777]">
-                  <Globe size={13} strokeWidth={1.5} />
-                  <p className="text-[8px] uppercase tracking-[0.22em]">
-                    memory
-                  </p>
-                </div>
+                <section className="rounded-3xl border border-white/[0.055] bg-white/[0.018] p-4 sm:p-5">
+                  <div className="mb-4 flex items-center justify-between border-b border-white/[0.045] pb-3">
+                    <div className="flex items-center gap-2 text-[#777777]">
+                      <User size={13} strokeWidth={1.5} />
+                      <p className="text-[8px] uppercase tracking-[0.22em]">
+                        identity
+                      </p>
+                    </div>
 
-                <input placeholder="first met" value={firstMet} onChange={(e) => setFirstMet(e.target.value)} className={inputStyle} />
-                <input placeholder="first impression" value={firstImpression} onChange={(e) => setFirstImpression(e.target.value)} className={inputStyle} />
-                <input placeholder="favorite map" value={favoriteMap} onChange={(e) => setFavoriteMap(e.target.value)} className={inputStyle} />
-                <input placeholder="things they said" value={commonWords} onChange={(e) => setCommonWords(e.target.value)} className={inputStyle} />
-                <input placeholder="why i remember them" value={whyRemember} onChange={(e) => setWhyRemember(e.target.value)} className={inputStyle} />
+                    <p className="text-[7px] uppercase tracking-[0.18em] text-[#555555]">
+                      required
+                    </p>
+                  </div>
+
+                  <div className="grid gap-4 md:grid-cols-2">
+                    <input
+                      placeholder="archive title"
+                      value={title}
+                      onChange={(e) => setTitle(e.target.value)}
+                      className={inputStyle}
+                    />
+
+                    <input
+                      placeholder="friend name"
+                      value={name}
+                      onChange={(e) => setName(e.target.value)}
+                      className={inputStyle}
+                    />
+
+                    <input
+                      placeholder="short description"
+                      value={desc}
+                      onChange={(e) => setDesc(e.target.value)}
+                      className={`${inputStyle} md:col-span-2`}
+                    />
+
+                    <input
+                      placeholder="what i called them"
+                      value={howICalled}
+                      onChange={(e) => setHowICalled(e.target.value)}
+                      className={inputStyle}
+                    />
+
+                    <input
+                      placeholder="what they called me"
+                      value={howTheyCalled}
+                      onChange={(e) => setHowTheyCalled(e.target.value)}
+                      className={inputStyle}
+                    />
+                  </div>
+                </section>
+
+                <section className="rounded-3xl border border-white/[0.055] bg-white/[0.018] p-4 sm:p-5">
+                  <div className="mb-4 flex items-center justify-between border-b border-white/[0.045] pb-3">
+                    <div className="flex items-center gap-2 text-[#777777]">
+                      <Globe size={13} strokeWidth={1.5} />
+                      <p className="text-[8px] uppercase tracking-[0.22em]">
+                        memory
+                      </p>
+                    </div>
+
+                    <p className="text-[7px] uppercase tracking-[0.18em] text-[#555555]">
+                      old server
+                    </p>
+                  </div>
+
+                  <div className="grid gap-4 md:grid-cols-2">
+                    <input
+                      placeholder="first met"
+                      value={firstMet}
+                      onChange={(e) => setFirstMet(e.target.value)}
+                      className={inputStyle}
+                    />
+
+                    <input
+                      placeholder="first impression"
+                      value={firstImpression}
+                      onChange={(e) => setFirstImpression(e.target.value)}
+                      className={inputStyle}
+                    />
+
+                    <input
+                      placeholder="favorite map"
+                      value={favoriteMap}
+                      onChange={(e) => setFavoriteMap(e.target.value)}
+                      className={inputStyle}
+                    />
+
+                    <input
+                      placeholder="things they said"
+                      value={commonWords}
+                      onChange={(e) => setCommonWords(e.target.value)}
+                      className={inputStyle}
+                    />
+
+                    <input
+                      placeholder="why i remember them"
+                      value={whyRemember}
+                      onChange={(e) => setWhyRemember(e.target.value)}
+                      className={`${inputStyle} md:col-span-2`}
+                    />
+                  </div>
+                </section>
+
+                <section className="grid gap-4 md:grid-cols-2">
+                  <div className="rounded-3xl border border-white/[0.055] bg-white/[0.018] p-4 sm:p-5">
+                    <div className="mb-4 flex items-center gap-2 border-b border-white/[0.045] pb-3 text-[#777777]">
+                      <Sparkles size={12} strokeWidth={1.5} />
+                      <p className="text-[8px] uppercase tracking-[0.22em]">
+                        traits
+                      </p>
+                    </div>
+
+                    <textarea
+                      placeholder="write one trait per line..."
+                      value={personality}
+                      onChange={(e) => setPersonality(e.target.value)}
+                      className="h-28 w-full resize-none rounded-2xl border border-white/[0.055] bg-white/[0.025] p-4 text-[11px] leading-relaxed text-[#d0d0d0] outline-none placeholder:text-[#666666] focus:border-white/15"
+                    />
+                  </div>
+
+                  <div className="rounded-3xl border border-white/[0.055] bg-white/[0.018] p-4 sm:p-5">
+                    <div className="mb-4 flex items-center gap-2 border-b border-white/[0.045] pb-3 text-[#777777]">
+                      <MessageSquare size={12} strokeWidth={1.5} />
+                      <p className="text-[8px] uppercase tracking-[0.22em]">
+                        summary
+                      </p>
+                    </div>
+
+                    <textarea
+                      placeholder="a small final note..."
+                      value={summary}
+                      onChange={(e) => setSummary(e.target.value)}
+                      className="h-28 w-full resize-none rounded-2xl border border-white/[0.055] bg-white/[0.025] p-4 text-[11px] leading-relaxed text-[#d0d0d0] outline-none placeholder:text-[#666666] focus:border-white/15"
+                    />
+                  </div>
+                </section>
+
+                <section className="rounded-3xl border border-white/[0.055] bg-white/[0.018] p-4 sm:p-5">
+                  <div className="mb-4 flex items-center justify-between border-b border-white/[0.045] pb-3">
+                    <div className="flex items-center gap-2 text-[#777777]">
+                      <Music2 size={13} strokeWidth={1.5} />
+                      <p className="text-[8px] uppercase tracking-[0.22em]">
+                        song answer
+                      </p>
+                    </div>
+
+                    <p className="text-[7px] uppercase tracking-[0.18em] text-[#555555]">
+                      vn audio
+                    </p>
+                  </div>
+
+                  <div className="grid gap-4 md:grid-cols-[1fr_190px] md:items-end">
+                    <input
+                      placeholder="spotify track / episode / playlist link"
+                      value={spotifyUrl}
+                      onChange={(e) => setSpotifyUrl(e.target.value)}
+                      className={inputStyle}
+                    />
+
+                    <div className="rounded-2xl border border-white/[0.055] bg-black/25 px-4 py-3">
+                      <p className="text-[7px] uppercase tracking-[0.18em] text-[#777777]">
+                        chat preview
+                      </p>
+                      <p className="mt-1.5 text-[8.5px] leading-relaxed text-[#555555]">
+                        if i were a song...
+                      </p>
+                    </div>
+                  </div>
+                </section>
+
+                <section className="rounded-3xl border border-white/[0.055] bg-white/[0.018] p-4 sm:p-5">
+                  <div className="mb-4 flex items-center justify-between border-b border-white/[0.045] pb-3">
+                    <div className="flex items-center gap-2 text-[#777777]">
+                      <Film size={13} strokeWidth={1.5} />
+                      <p className="text-[8px] uppercase tracking-[0.22em]">
+                        character answer
+                      </p>
+                    </div>
+
+                    <p className="text-[7px] uppercase tracking-[0.18em] text-[#555555]">
+                      image + why
+                    </p>
+                  </div>
+
+                  <div className="grid gap-4 md:grid-cols-[1fr_190px]">
+                    <div className="space-y-4">
+                      <label className="flex min-h-[96px] cursor-pointer items-center justify-between gap-4 rounded-2xl border border-dashed border-white/[0.055] bg-white/[0.025] p-4 transition-all duration-700 hover:border-white/15 hover:bg-white/[0.04]">
+                        <input
+                          type="file"
+                          accept="image/*"
+                          hidden
+                          onChange={(e) =>
+                            setCharacterFile(e.target.files?.[0] || null)
+                          }
+                        />
+
+                        <div className="min-w-0">
+                          <p className="truncate text-[8px] uppercase tracking-[0.18em] text-[#777777]">
+                            {characterFile
+                              ? characterFile.name
+                              : movieCharacterImage
+                              ? "character image saved"
+                              : "upload character image"}
+                          </p>
+                          <p className="mt-2 text-[9px] leading-relaxed text-[#555555]">
+                            this becomes the character answer bubble.
+                          </p>
+                        </div>
+
+                        <Upload
+                          size={15}
+                          strokeWidth={1.5}
+                          className="shrink-0 text-[#777777]"
+                        />
+                      </label>
+
+                      <textarea
+                        placeholder="why?"
+                        value={movieReason}
+                        onChange={(e) => setMovieReason(e.target.value)}
+                        className="h-28 w-full resize-none rounded-2xl border border-white/[0.055] bg-white/[0.025] p-4 text-[11px] leading-relaxed text-[#d0d0d0] outline-none placeholder:text-[#666666] focus:border-white/15"
+                      />
+                    </div>
+
+                    <div className="min-h-[150px] overflow-hidden rounded-2xl border border-white/[0.055] bg-black/25">
+                      {characterFile || movieCharacterImage ? (
+                        <img
+                          src={
+                            characterFile
+                              ? URL.createObjectURL(characterFile)
+                              : movieCharacterImage
+                          }
+                          alt="character preview"
+                          className="h-full max-h-[230px] w-full object-cover grayscale opacity-80"
+                        />
+                      ) : (
+                        <div className="flex h-full min-h-[150px] items-center justify-center px-4 text-center text-[7px] uppercase tracking-[0.18em] text-[#555555]">
+                          character preview
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </section>
+
+                <section className="rounded-3xl border border-white/[0.055] bg-white/[0.018] p-4 sm:p-5">
+                  <div className="mb-4 flex items-center justify-between border-b border-white/[0.045] pb-3">
+                    <div className="flex items-center gap-2 text-[#777777]">
+                      <Upload size={13} strokeWidth={1.5} />
+                      <p className="text-[8px] uppercase tracking-[0.22em]">
+                        main image
+                      </p>
+                    </div>
+
+                    <p className="text-[7px] uppercase tracking-[0.18em] text-[#555555]">
+                      card photo
+                    </p>
+                  </div>
+
+                  <div className="grid gap-4 md:grid-cols-[1fr_150px]">
+                    <label className="flex min-h-[120px] cursor-pointer flex-col items-center justify-center rounded-2xl border border-dashed border-white/[0.055] bg-white/[0.025] p-5 text-center transition-all duration-700 hover:border-white/15 hover:bg-white/[0.04]">
+                      <input
+                        type="file"
+                        hidden
+                        onChange={(e) => setFile(e.target.files?.[0] || null)}
+                      />
+
+                      <Upload
+                        size={17}
+                        strokeWidth={1.5}
+                        className="mb-3 text-[#777777]"
+                      />
+
+                      <p className="max-w-full truncate text-[8px] uppercase tracking-[0.18em] text-[#777777]">
+                        {file
+                          ? file.name
+                          : existingImage
+                          ? "image already saved"
+                          : "upload image"}
+                      </p>
+                    </label>
+
+                    <div className="min-h-[120px] overflow-hidden rounded-2xl border border-white/[0.055] bg-black/25">
+                      {file || existingImage ? (
+                        <img
+                          src={file ? URL.createObjectURL(file) : existingImage}
+                          alt="preview"
+                          className="h-full max-h-[170px] w-full object-cover grayscale opacity-80"
+                        />
+                      ) : (
+                        <div className="flex h-full min-h-[120px] items-center justify-center px-3 text-center text-[7px] uppercase tracking-[0.18em] text-[#555555]">
+                          main preview
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </section>
               </div>
             </div>
 
-            <div className="mt-6 grid gap-5 md:grid-cols-2">
-              <div className="space-y-3">
-                <p className="flex items-center gap-2 text-[8px] uppercase tracking-[0.22em] text-[#777777]">
-                  <Sparkles size={12} strokeWidth={1.5} />
-                  traits
+            <div className="sticky bottom-0 z-20 mt-2 border-t border-white/[0.055] bg-[#070707]/96 px-5 py-4 backdrop-blur-2xl sm:px-6">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <p className="text-[8px] uppercase tracking-[0.18em] text-[#666666]">
+                  locked room
                 </p>
 
-                <textarea
-                  placeholder="write one trait per line..."
-                  value={personality}
-                  onChange={(e) => setPersonality(e.target.value)}
-                  className="h-32 w-full resize-none rounded-2xl border border-white/[0.055] bg-white/[0.025] p-4 text-[12px] leading-relaxed text-[#d0d0d0] outline-none placeholder:text-[#666666] focus:border-white/15"
-                />
-              </div>
+                <div className="flex items-center justify-end gap-3">
+                  {editId && (
+                    <button
+                      onClick={() => {
+                        resetForm();
+                        setModalOpen(false);
+                      }}
+                      disabled={loading}
+                      className="rounded-full border border-white/[0.055] bg-white/[0.025] px-4 py-2 text-[8px] uppercase tracking-[0.22em] text-[#777777] transition-all duration-700 hover:border-white/15 hover:text-white disabled:opacity-30"
+                    >
+                      cancel
+                    </button>
+                  )}
 
-              <div className="space-y-3">
-                <p className="flex items-center gap-2 text-[8px] uppercase tracking-[0.22em] text-[#777777]">
-                  <MessageSquare size={12} strokeWidth={1.5} />
-                  summary
-                </p>
-
-                <textarea
-                  placeholder="a small final note..."
-                  value={summary}
-                  onChange={(e) => setSummary(e.target.value)}
-                  className="h-32 w-full resize-none rounded-2xl border border-white/[0.055] bg-white/[0.025] p-4 text-[12px] leading-relaxed text-[#d0d0d0] outline-none placeholder:text-[#666666] focus:border-white/15"
-                />
-              </div>
-            </div>
-
-            <div className="mt-6 grid gap-6 md:grid-cols-2">
-              <div className="space-y-4">
-                <div className="flex items-center gap-2 text-[#777777]">
-                  <Music2 size={13} strokeWidth={1.5} />
-                  <p className="text-[8px] uppercase tracking-[0.22em]">
-                    soundtrack
-                  </p>
+                  <button
+                    onClick={save}
+                    disabled={loading}
+                    className="group flex items-center gap-2 rounded-full border border-white/[0.055] bg-white/[0.025] px-4 py-2 text-[8px] uppercase tracking-[0.22em] text-[#9a9a9a] shadow-[0_10px_30px_rgba(0,0,0,0.4)] transition-all duration-700 hover:-translate-y-0.5 hover:border-white/15 hover:bg-white/[0.04] hover:text-white disabled:cursor-not-allowed disabled:opacity-20"
+                  >
+                    {loading ? (
+                      <Loader2
+                        size={10}
+                        strokeWidth={1.5}
+                        className="animate-spin"
+                      />
+                    ) : (
+                      <Send
+                        size={10}
+                        strokeWidth={1.5}
+                        className="transition-transform duration-700 group-hover:translate-x-0.5"
+                      />
+                    )}
+                    {loading ? "saving" : editId ? "update" : "release"}
+                  </button>
                 </div>
-
-                <input
-                  placeholder="song that feels like them"
-                  value={matchingSong}
-                  onChange={(e) => setMatchingSong(e.target.value)}
-                  className={inputStyle}
-                />
-
-                <input
-                  placeholder="spotify link"
-                  value={spotifyUrl}
-                  onChange={(e) => setSpotifyUrl(e.target.value)}
-                  className={inputStyle}
-                />
               </div>
-
-              <div className="space-y-4">
-                <div className="flex items-center gap-2 text-[#777777]">
-                  <Film size={13} strokeWidth={1.5} />
-                  <p className="text-[8px] uppercase tracking-[0.22em]">
-                    movie feeling
-                  </p>
-                </div>
-
-                <input
-                  placeholder="movie character"
-                  value={movieCharacter}
-                  onChange={(e) => setMovieCharacter(e.target.value)}
-                  className={inputStyle}
-                />
-
-                <input
-                  placeholder="tmdb link"
-                  value={tmdbUrl}
-                  onChange={(e) => setTmdbUrl(e.target.value)}
-                  className={inputStyle}
-                />
-
-                <textarea
-                  placeholder="why do they feel like this character?"
-                  value={movieReason}
-                  onChange={(e) => setMovieReason(e.target.value)}
-                  className="h-28 w-full resize-none rounded-2xl border border-white/[0.055] bg-white/[0.025] p-4 text-[12px] leading-relaxed text-[#d0d0d0] outline-none placeholder:text-[#666666] focus:border-white/15"
-                />
-              </div>
-            </div>
-
-            <div className="mt-6 grid items-stretch gap-4 md:grid-cols-[1fr_150px]">
-              <label className="flex cursor-pointer flex-col items-center justify-center rounded-2xl border border-dashed border-white/[0.055] bg-white/[0.025] p-6 text-center transition-all duration-700 hover:border-white/15 hover:bg-white/[0.04]">
-                <input
-                  type="file"
-                  hidden
-                  onChange={(e) => setFile(e.target.files?.[0] || null)}
-                />
-
-                <Upload
-                  size={17}
-                  strokeWidth={1.5}
-                  className="mb-4 text-[#777777]"
-                />
-
-                <p className="text-[8px] uppercase tracking-[0.18em] text-[#777777]">
-                  {file
-                    ? file.name
-                    : existingImage
-                    ? "image already saved"
-                    : "upload image"}
-                </p>
-              </label>
-
-              {(file || existingImage) && (
-                <div className="relative min-h-[150px] overflow-hidden rounded-2xl border border-white/[0.055] bg-white/[0.025]">
-                  <img
-                    src={file ? URL.createObjectURL(file) : existingImage}
-                    alt="preview"
-                    className="h-full w-full object-cover grayscale opacity-80"
-                  />
-                </div>
-              )}
-            </div>
-
-            <div className="mt-7 flex gap-3">
-              <button
-                onClick={save}
-                disabled={loading}
-                className="group flex flex-1 items-center justify-center gap-2 rounded-full border border-white/[0.055] bg-white/[0.025] px-4 py-3 text-[8px] uppercase tracking-[0.22em] text-[#9a9a9a] shadow-[0_10px_30px_rgba(0,0,0,0.4)] transition-all duration-700 hover:-translate-y-0.5 hover:border-white/15 hover:bg-white/[0.04] hover:text-white disabled:cursor-not-allowed disabled:opacity-20"
-              >
-                {loading ? (
-                  <Loader2 size={10} strokeWidth={1.5} className="animate-spin" />
-                ) : (
-                  <Save size={10} strokeWidth={1.5} />
-                )}
-                {loading ? "saving" : editId ? "update memory" : "save memory"}
-              </button>
-
-              {editId && (
-                <button
-                  onClick={() => {
-                    resetForm();
-                    setModalOpen(false);
-                  }}
-                  className="rounded-full border border-white/[0.055] bg-white/[0.025] px-5 text-[8px] uppercase tracking-[0.22em] text-[#777777] transition-all duration-700 hover:border-white/15 hover:text-white"
-                >
-                  cancel
-                </button>
-              )}
             </div>
           </div>
         </div>
@@ -932,6 +1183,15 @@ const GlobalStyles = () => (
       -webkit-line-clamp: 2;
       -webkit-box-orient: vertical;
       overflow: hidden;
+    }
+
+    .modal-scroll::-webkit-scrollbar {
+      display: none;
+    }
+
+    .modal-scroll {
+      -ms-overflow-style: none;
+      scrollbar-width: none;
     }
 
     .scrollbar-hide::-webkit-scrollbar {

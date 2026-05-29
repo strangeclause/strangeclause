@@ -60,6 +60,8 @@ export default function BookAdminPage() {
   const [editingId, setEditingId] = useState<number | null>(null);
   const [visibleCount, setVisibleCount] = useState(COLLAPSE_SIZE);
   const [rainDrops, setRainDrops] = useState<RainDrop[]>([]);
+  const [userEmail, setUserEmail] = useState<string | null>(null);
+  const [authLoading, setAuthLoading] = useState(true);
 
   const [form, setForm] = useState({
     title: "",
@@ -121,6 +123,42 @@ export default function BookAdminPage() {
     setRainDrops(drops);
   }, []);
 
+  useEffect(() => {
+    const checkUser = async () => {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+
+      const email = session?.user?.email || null;
+
+      if (!email) {
+        router.replace("/admin");
+        setAuthLoading(false);
+        return;
+      }
+
+      setUserEmail(email);
+      setAuthLoading(false);
+    };
+
+    checkUser();
+
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, session) => {
+      const email = session?.user?.email || null;
+      setUserEmail(email);
+
+      if (!email) {
+        router.replace("/admin");
+      }
+    });
+
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, [router]);
+
   const fetchBooks = async () => {
     const { data, error } = await supabase
       .from("book_recommendations")
@@ -136,8 +174,10 @@ export default function BookAdminPage() {
   };
 
   useEffect(() => {
-    fetchBooks();
-  }, []);
+    if (!authLoading && userEmail) {
+      fetchBooks();
+    }
+  }, [authLoading, userEmail]);
 
   const resetForm = () => {
     setForm({
@@ -259,6 +299,14 @@ export default function BookAdminPage() {
       ?.scrollIntoView({ behavior: "smooth", block: "start" });
   };
 
+  if (authLoading || !userEmail) {
+    return (
+      <main className="flex min-h-screen items-center justify-center bg-[#020202] text-white">
+        <Loader2 size={18} strokeWidth={1.5} className="animate-spin" />
+      </main>
+    );
+  }
+
   return (
     <main
       className={`${inter.className} relative min-h-screen overflow-x-hidden bg-[#020202] text-[#b7b7b7] font-light text-[13px] antialiased selection:bg-white/10 selection:text-white`}
@@ -266,29 +314,33 @@ export default function BookAdminPage() {
       <Background rainDrops={rainDrops} />
 
       <nav className="fixed left-0 right-0 top-0 z-[60] border-b border-white/[0.045] bg-[#020202]/72 backdrop-blur-xl">
-        <div className="mx-auto flex max-w-[1500px] items-center justify-between gap-4 px-6 py-5 sm:px-12 md:px-20 lg:px-28 xl:px-36">
+        <div className="mx-auto grid max-w-[1500px] grid-cols-[1fr_auto] items-center gap-3 px-5 py-4 sm:px-8 sm:py-5 md:grid-cols-[1fr_auto_1fr] md:px-20 lg:px-28 xl:px-36">
           <button
-            onClick={() => router.back()}
-            className="group flex shrink-0 items-center gap-2 text-[8.5px] uppercase tracking-[0.22em] text-[#666666] transition-colors duration-700 hover:text-white/80 sm:text-[9px]"
+            onClick={() => router.push("/admin")}
+            className="group hidden shrink-0 items-center gap-2 justify-self-start text-[8.5px] uppercase tracking-[0.22em] text-[#666666] transition-colors duration-700 hover:text-white/80 md:flex md:text-[9px]"
           >
-            <ArrowLeft size={12} strokeWidth={1.5} />
+            <ArrowLeft
+              size={12}
+              strokeWidth={1.5}
+              className="transition-transform duration-700 group-hover:-translate-x-1"
+            />
             leave
           </button>
 
           <button
             onClick={() => router.push("/")}
-            className="group flex min-w-0 flex-col items-center text-center"
+            className="group col-start-1 row-start-1 flex min-w-0 flex-col items-start justify-self-start text-left md:col-start-2 md:items-center md:justify-self-center md:text-center"
           >
             <span className="text-[10px] font-medium uppercase tracking-[0.24em] text-white/80 sm:text-[11px]">
               strange clause
             </span>
 
-            <span className="hidden max-w-[320px] truncate text-[8px] lowercase tracking-[0.12em] text-[#666666] transition-colors duration-500 group-hover:text-white/60 sm:block">
+            <span className="block max-w-[220px] truncate text-[7px] lowercase tracking-[0.12em] text-[#666666] transition-colors duration-500 group-hover:text-white/60 sm:max-w-[320px] sm:text-[8px]">
               admin books kept behind rainy glass
             </span>
           </button>
 
-          <div className="w-[48px]" />
+          <div className="hidden md:block" aria-hidden="true" />
         </div>
       </nav>
 

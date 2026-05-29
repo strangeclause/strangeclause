@@ -10,6 +10,7 @@ import {
   Camera,
   Ghost,
   Sparkles,
+  Send,
   Loader2,
   Plus,
   CloudRain,
@@ -42,10 +43,11 @@ export default function ImageAdmin() {
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   const [items, setItems] = useState<MemoryImage[]>([]);
-  const [file, setFile] = useState<File | null>(null);
+  const [files, setFiles] = useState<File[]>([]);
   const [loading, setLoading] = useState(false);
   const [status, setStatus] = useState("");
   const [userEmail, setUserEmail] = useState<string | null>(null);
+  const [authLoading, setAuthLoading] = useState(true);
   const [modalOpen, setModalOpen] = useState(false);
   const [visibleCount, setVisibleCount] = useState(COLLAPSE_SIZE);
   const [rainDrops, setRainDrops] = useState<RainDrop[]>([]);
@@ -102,18 +104,42 @@ export default function ImageAdmin() {
         data: { session },
       } = await supabase.auth.getSession();
 
-      setUserEmail(session?.user?.email || null);
+      const email = session?.user?.email || null;
+
+      if (!email) {
+        router.replace("/admin");
+        setAuthLoading(false);
+        return;
+      }
+
+      setUserEmail(email);
+      setAuthLoading(false);
       await fetchImages();
     };
 
     init();
-  }, []);
+
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, session) => {
+      const email = session?.user?.email || null;
+      setUserEmail(email);
+
+      if (!email) {
+        router.replace("/admin");
+      }
+    });
+
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, [router]);
 
   const closeModal = (): void => {
     if (loading) return;
 
     setModalOpen(false);
-    setFile(null);
+    setFiles([]);
 
     if (fileInputRef.current) {
       fileInputRef.current.value = "";
@@ -121,7 +147,7 @@ export default function ImageAdmin() {
   };
 
   const upload = async (): Promise<void> => {
-    if (!file) {
+    if (files.length === 0) {
       setStatus("the void is empty");
       setTimeout(() => setStatus(""), 3000);
       return;
@@ -136,28 +162,38 @@ export default function ImageAdmin() {
     setLoading(true);
 
     try {
-      const fileExt = file.name.split(".").pop() || "png";
-      const fileName = `${Date.now()}.${fileExt}`;
+      const uploadedRows = await Promise.all(
+        files.map(async (selectedFile, index) => {
+          const fileExt = selectedFile.name.split(".").pop() || "png";
+          const fileName = `${Date.now()}-${index}-${crypto.randomUUID()}.${fileExt}`;
 
-      const { error: uploadError } = await supabase.storage
-        .from("virtual-memory")
-        .upload(fileName, file);
+          const { error: uploadError } = await supabase.storage
+            .from("virtual-memory")
+            .upload(fileName, selectedFile);
 
-      if (uploadError) throw uploadError;
+          if (uploadError) throw uploadError;
 
-      const { data: urlData } = supabase.storage
-        .from("virtual-memory")
-        .getPublicUrl(fileName);
+          const { data: urlData } = supabase.storage
+            .from("virtual-memory")
+            .getPublicUrl(fileName);
 
-      const { error: dbError } = await supabase.from("memory_gallery").insert({
-        image_url: urlData.publicUrl,
-        uploaded_by: userEmail,
-      });
+          return {
+            image_url: urlData.publicUrl,
+            uploaded_by: userEmail,
+          };
+        })
+      );
+
+      const { error: dbError } = await supabase
+        .from("memory_gallery")
+        .insert(uploadedRows);
 
       if (dbError) throw dbError;
 
-      setStatus("fragment archived");
-      setFile(null);
+      setStatus(
+        `${uploadedRows.length} fragment${uploadedRows.length > 1 ? "s" : ""} archived`
+      );
+      setFiles([]);
       setModalOpen(false);
       setVisibleCount(COLLAPSE_SIZE);
 
@@ -203,6 +239,14 @@ export default function ImageAdmin() {
       ?.scrollIntoView({ behavior: "smooth", block: "start" });
   };
 
+  if (authLoading) {
+    return (
+      <main className="flex min-h-screen items-center justify-center bg-[#020202] text-white">
+        <Loader2 size={18} className="animate-spin" />
+      </main>
+    );
+  }
+
   return (
     <main
       className={`${inter.className} relative min-h-screen overflow-x-hidden bg-[#020202] text-[#b7b7b7] font-light text-[13px] antialiased selection:bg-white/10 selection:text-white`}
@@ -210,11 +254,11 @@ export default function ImageAdmin() {
       <Background rainDrops={rainDrops} />
 
       <nav className="fixed left-0 right-0 top-0 z-[60] border-b border-white/[0.045] bg-[#020202]/72 backdrop-blur-xl">
-        <div className="mx-auto flex max-w-[1500px] items-center justify-between gap-4 px-6 py-5 sm:px-12 md:px-20 lg:px-28 xl:px-36">
+        <div className="mx-auto flex max-w-[1500px] items-center justify-between gap-3 px-5 py-4 sm:px-12 sm:py-5 md:px-20 lg:px-28 xl:px-36">
           <button
             type="button"
             onClick={() => router.push("/admin")}
-            className="group flex shrink-0 items-center gap-2 text-[8.5px] uppercase tracking-[0.22em] text-[#666666] transition-colors duration-700 hover:text-white/80 sm:text-[9px]"
+            className="group hidden shrink-0 items-center gap-2 text-[8.5px] uppercase tracking-[0.22em] text-[#666666] transition-colors duration-700 hover:text-white/80 sm:flex sm:text-[9px]"
           >
             <ArrowLeft
               size={12}
@@ -227,13 +271,13 @@ export default function ImageAdmin() {
           <button
             type="button"
             onClick={() => router.push("/")}
-            className="group flex min-w-0 flex-col items-center text-center"
+            className="group flex min-w-0 flex-1 flex-col items-start text-left sm:flex-none sm:items-center sm:text-center"
           >
             <span className="text-[10px] font-medium uppercase tracking-[0.24em] text-white/80 sm:text-[11px]">
               strange clause
             </span>
 
-            <span className="hidden max-w-[310px] truncate text-[8px] lowercase tracking-[0.12em] text-[#666666] transition-colors duration-500 group-hover:text-white/60 sm:block">
+            <span className="block max-w-[220px] truncate text-[7px] lowercase tracking-[0.12em] text-[#666666] transition-colors duration-500 group-hover:text-white/60 sm:max-w-[310px] sm:text-[8px]">
               roblox memories
             </span>
           </button>
@@ -259,8 +303,8 @@ export default function ImageAdmin() {
         </div>
       )}
 
-      <div className="relative z-20 mx-auto max-w-[1500px] px-6 pb-24 pt-36 sm:px-12 md:px-20 md:pt-44 lg:px-28 xl:px-36">
-        <header className="animate-fade-in mb-12 grid grid-cols-1 items-end gap-6 lg:grid-cols-[1.1fr_0.9fr]">
+      <div className="relative z-20 mx-auto max-w-[1500px] px-5 pb-24 pt-32 sm:px-12 md:px-20 md:pt-44 lg:px-28 xl:px-36">
+        <header className="animate-fade-in mb-10 grid grid-cols-1 items-end gap-5 sm:mb-12 lg:grid-cols-[1.1fr_0.9fr] lg:gap-6">
           <div className="max-w-2xl space-y-5">
             <div className="flex items-center gap-2">
               <CloudRain size={12} className="text-[#666666] stroke-[1.4px]" />
@@ -270,7 +314,7 @@ export default function ImageAdmin() {
               </p>
             </div>
 
-            <h1 className="max-w-2xl text-[30px] font-light leading-[1.08] tracking-[-0.06em] text-white/90 md:text-[42px]">
+            <h1 className="max-w-2xl text-[25px] font-light leading-[1.08] tracking-[-0.06em] text-white/90 sm:text-[30px] md:text-[42px]">
               proof that i was
               <br />
               there.
@@ -383,100 +427,117 @@ export default function ImageAdmin() {
       </div>
 
       {modalOpen && (
-        <div
-          onClick={closeModal}
-          className="animate-modal fixed inset-0 z-[999] flex items-center justify-center bg-black/90 p-4 backdrop-blur-xl"
-        >
-          <div
-            onClick={(event) => event.stopPropagation()}
-            className="relative w-full max-w-md overflow-hidden rounded-3xl border border-white/[0.06] bg-[#070707]/95 p-5 shadow-[0_30px_90px_rgba(0,0,0,0.75)] backdrop-blur-2xl sm:p-6"
-          >
-            <button
-              type="button"
-              onClick={closeModal}
-              disabled={loading}
-              className="absolute right-5 top-5 text-[#666666] transition-colors duration-700 hover:text-white disabled:opacity-30"
-            >
-              <X size={14} />
-            </button>
-
-            <div className="mb-6">
-              <p className="mb-2 text-[8px] uppercase tracking-[0.22em] text-[#777777]">
-                new vessel
-              </p>
-
-              <h2 className="text-[14px] font-light uppercase tracking-[0.2em] text-white/90 sm:text-[15px]">
-                archive an image
-              </h2>
-
-              <p className="mt-2 text-[11.5px] leading-relaxed text-[#777777]">
-                Upload one image fragment. It will be saved into the visual
-                residue gallery.
-              </p>
-            </div>
-
+        <Modal title="add images" onClose={closeModal} loading={loading}>
+          <div className="grid gap-4">
             <input
               type="file"
               hidden
+              multiple
               ref={fileInputRef}
               accept="image/*"
-              onChange={(event) => setFile(event.target.files?.[0] || null)}
+              onChange={(event) =>
+                setFiles(Array.from(event.target.files || []))
+              }
             />
 
             <button
               type="button"
               onClick={() => fileInputRef.current?.click()}
-              className="flex min-h-[180px] w-full cursor-pointer flex-col items-center justify-center overflow-hidden rounded-2xl border border-dashed border-white/[0.055] bg-white/[0.025] p-4 text-center transition-all duration-700 hover:border-white/15 hover:bg-white/[0.04]"
+              className="flex min-h-[220px] w-full cursor-pointer flex-col items-center justify-center overflow-hidden rounded-2xl border border-dashed border-white/[0.055] bg-white/[0.025] p-4 text-center transition-all duration-700 hover:border-white/15 hover:bg-white/[0.04]"
             >
-              {file ? (
-                <img
-                  src={URL.createObjectURL(file)}
-                  alt="preview"
-                  className="max-h-[220px] w-full rounded-xl object-cover grayscale opacity-80"
-                />
+              {files.length > 0 ? (
+                <div className="grid w-full grid-cols-2 gap-2 sm:grid-cols-3">
+                  {files.slice(0, 6).map((selectedFile, index) => (
+                    <div
+                      key={`${selectedFile.name}-${index}`}
+                      className="relative aspect-square overflow-hidden rounded-xl border border-white/[0.05] bg-black"
+                    >
+                      <img
+                        src={URL.createObjectURL(selectedFile)}
+                        alt="preview"
+                        className="h-full w-full object-cover grayscale opacity-80"
+                      />
+                    </div>
+                  ))}
+
+                  {files.length > 6 && (
+                    <div className="flex aspect-square items-center justify-center rounded-xl border border-white/[0.05] bg-black/45 text-[8px] uppercase tracking-[0.18em] text-[#777777]">
+                      +{files.length - 6} more
+                    </div>
+                  )}
+                </div>
               ) : (
-                <>
+                <div className="flex flex-col items-center gap-3">
                   <Upload
                     size={18}
                     strokeWidth={1.5}
-                    className="mb-4 text-[#777777]"
+                    className="text-[#777777]"
                   />
                   <p className="text-[8px] uppercase tracking-[0.18em] text-[#777777]">
-                    choose image
+                    choose many images
                   </p>
-                </>
+                  <p className="max-w-xs text-[10.5px] leading-relaxed text-[#666666]">
+                    select one or more fragments, then let them stay in the
+                    gallery.
+                  </p>
+                </div>
               )}
             </button>
 
-            {file && (
-              <p className="mt-3 line-clamp-1 text-[10px] text-[#777777]">
-                {file.name}
-              </p>
+            {files.length > 0 && (
+              <div className="rounded-2xl border border-white/[0.045] bg-black/25 p-3">
+                <p className="mb-2 text-[8px] uppercase tracking-[0.18em] text-[#666666]">
+                  {files.length} selected
+                </p>
+                <div className="max-h-24 space-y-1 overflow-y-auto pr-1 modal-scroll">
+                  {files.map((selectedFile, index) => (
+                    <div
+                      key={`${selectedFile.name}-name-${index}`}
+                      className="flex items-center justify-between gap-3 text-[10px] text-[#777777]"
+                    >
+                      <span className="line-clamp-1">{selectedFile.name}</span>
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setFiles((prev) =>
+                            prev.filter((_, fileIndex) => fileIndex !== index)
+                          )
+                        }
+                        className="shrink-0 text-[#666666] transition hover:text-white"
+                      >
+                        <X size={11} />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
             )}
 
-            <div className="mt-5 flex items-center justify-between border-t border-white/[0.055] pt-4">
+            <div className="flex items-center justify-between border-t border-white/[0.055] pt-4">
               <p className="text-[8px] uppercase tracking-[0.18em] text-[#666666]">
-                {isAdmin ? "allowed room" : "locked room"}
+                locked room
               </p>
 
               <button
                 type="button"
                 onClick={upload}
-                disabled={loading || !file || !isAdmin}
+                disabled={loading || files.length === 0 || !isAdmin}
                 className="group flex items-center gap-2 rounded-full border border-white/[0.055] bg-white/[0.025] px-4 py-2 text-[8px] uppercase tracking-[0.22em] text-[#9a9a9a] shadow-[0_10px_30px_rgba(0,0,0,0.4)] transition-all duration-700 hover:-translate-y-0.5 hover:border-white/15 hover:bg-white/[0.04] hover:text-white disabled:cursor-not-allowed disabled:opacity-20"
               >
-                {loading && (
+                {loading ? (
                   <Loader2
                     size={10}
                     strokeWidth={1.5}
                     className="animate-spin"
                   />
+                ) : (
+                  <Send size={10} strokeWidth={1.5} className="transition-transform duration-700 group-hover:translate-x-0.5" />
                 )}
-                {loading ? "saving" : "archive"}
+                {loading ? "saving" : "release"}
               </button>
             </div>
           </div>
-        </div>
+        </Modal>
       )}
 
       <footer className="relative z-20 border-t border-white/[0.045] bg-[#020202]/90 px-6 py-14 text-center backdrop-blur-xl">
@@ -489,6 +550,64 @@ export default function ImageAdmin() {
     </main>
   );
 }
+
+function Modal({
+  title,
+  children,
+  onClose,
+  loading,
+}: {
+  title: string;
+  children: React.ReactNode;
+  onClose: () => void;
+  loading: boolean;
+}) {
+  return (
+    <div
+      onClick={onClose}
+      className="animate-modal fixed inset-0 z-[999] flex items-center justify-center bg-black/90 p-4 backdrop-blur-xl sm:p-6"
+    >
+      <div
+        onClick={(event) => event.stopPropagation()}
+        className="modal-scroll relative max-h-[90vh] w-full max-w-3xl overflow-y-auto rounded-3xl border border-white/[0.06] bg-[#070707]/95 p-5 shadow-[0_30px_90px_rgba(0,0,0,0.75)] backdrop-blur-2xl sm:p-6"
+      >
+        <div className="pointer-events-none absolute inset-x-10 top-0 h-px bg-gradient-to-r from-transparent via-white/12 to-transparent" />
+
+        <button
+          type="button"
+          onClick={onClose}
+          disabled={loading}
+          className="absolute right-5 top-5 z-20 text-[#666666] transition-colors duration-700 hover:text-white disabled:opacity-30"
+        >
+          <X size={14} />
+        </button>
+
+        <div className="mb-7 text-center">
+          <div className="mb-3 flex justify-center">
+            <div className="rounded-full border border-white/[0.06] bg-white/[0.025] p-3 shadow-[0_0_24px_rgba(255,255,255,0.035)]">
+              <Camera
+                size={14}
+                strokeWidth={1.5}
+                className="text-[#d0d0d0]"
+              />
+            </div>
+          </div>
+
+          <h2 className="text-[14px] font-light uppercase tracking-[0.22em] text-white/90">
+            {title}
+          </h2>
+
+          <p className="mx-auto mt-2 max-w-sm text-[11px] leading-relaxed text-[#777777]">
+            put down one quiet scene so it stays here after you close the tab.
+          </p>
+        </div>
+
+        {children}
+      </div>
+    </div>
+  );
+}
+
 
 function Background({ rainDrops }: { rainDrops: RainDrop[] }) {
   return (
@@ -656,6 +775,15 @@ function GlobalStyles() {
 
       .animate-modal {
         animation: modalFade 0.55s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+      }
+
+      .modal-scroll::-webkit-scrollbar {
+        display: none;
+      }
+
+      .modal-scroll {
+        -ms-overflow-style: none;
+        scrollbar-width: none;
       }
 
       .line-clamp-1 {

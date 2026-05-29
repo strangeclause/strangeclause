@@ -319,10 +319,10 @@ export default function LonelyCornersPage() {
       <div className="pointer-events-none fixed bottom-0 right-[12%] z-[2] h-px w-[24%] bg-gradient-to-r from-transparent via-white/5 to-transparent" />
 
       <nav className="fixed left-0 right-0 top-0 z-50 border-b border-white/[0.045] bg-[#020202]/72 backdrop-blur-xl">
-        <div className="mx-auto flex max-w-[1500px] items-center justify-between gap-4 px-6 py-5 sm:px-12 md:px-20 lg:px-28 xl:px-36">
+        <div className="mx-auto grid max-w-[1500px] grid-cols-[1fr_auto] items-center gap-3 px-5 py-4 sm:px-8 sm:py-5 md:grid-cols-[1fr_auto_1fr] md:px-20 lg:px-28 xl:px-36">
           <button
             onClick={() => router.push("/")}
-            className="group flex items-center gap-2 text-[9px] uppercase tracking-[0.22em] text-[#666666] transition-colors duration-700 hover:text-white/80"
+            className="group hidden items-center gap-2 justify-self-start text-[9px] uppercase tracking-[0.22em] text-[#666666] transition-colors duration-700 hover:text-white/80 md:flex"
           >
             <ArrowLeft
               size={12}
@@ -332,25 +332,26 @@ export default function LonelyCornersPage() {
             leave
           </button>
 
-          <div className="flex min-w-0 flex-col items-center text-center">
+          <div className="col-start-1 row-start-1 flex min-w-0 flex-col items-start justify-self-start text-left md:col-start-2 md:items-center md:justify-self-center md:text-center">
             <p className="text-[10px] font-medium uppercase tracking-[0.26em] text-white/80 sm:text-[11px]">
               strange clause
             </p>
-            <p className="hidden max-w-[280px] truncate text-[8px] lowercase tracking-[0.12em] text-[#666666] md:block">
+            <p className="block max-w-[220px] truncate text-[7px] lowercase tracking-[0.12em] text-[#666666] sm:max-w-[280px] sm:text-[8px]">
               lonely corners
             </p>
           </div>
 
           <button
             onClick={() => setOpen(true)}
-            className="group flex items-center gap-2 rounded-full border border-white/[0.045] bg-white/[0.016] px-3.5 py-2 text-[8px] uppercase tracking-[0.22em] text-[#777777] shadow-[0_10px_30px_rgba(0,0,0,0.45)] transition-all duration-700 hover:-translate-y-0.5 hover:border-white/10 hover:bg-white/[0.03] hover:text-white/75 sm:px-4 sm:text-[8.5px]"
+            className="group col-start-2 row-start-1 flex items-center justify-self-end gap-2 rounded-full border border-white/[0.045] bg-white/[0.016] px-3 py-2 text-[8px] uppercase tracking-[0.22em] text-[#777777] shadow-[0_10px_30px_rgba(0,0,0,0.45)] transition-all duration-700 hover:-translate-y-0.5 hover:border-white/10 hover:bg-white/[0.03] hover:text-white/75 sm:px-4 sm:text-[8.5px] md:col-start-3"
           >
             <Plus
               size={11}
               strokeWidth={1.5}
               className="transition-transform duration-700 group-hover:rotate-90"
             />
-            add corner
+            <span className="hidden sm:inline">add corner</span>
+            <span className="sm:hidden">add</span>
           </button>
         </div>
       </nav>
