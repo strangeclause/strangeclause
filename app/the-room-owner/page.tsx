@@ -30,6 +30,16 @@ type RainDrop = {
   duration: string;
 };
 
+
+type FavoriteItem = {
+  title: string;
+  image_url: string;
+  link: string;
+  subtitle?: string;
+  year?: string;
+  source?: string;
+};
+
 type AboutProfile = {
   id: number;
   page_badge: string | null;
@@ -52,10 +62,10 @@ type AboutProfile = {
   floating_notes: string[] | null;
   bubble_chats: { side: "left" | "right"; text: string }[] | null;
   usually_called: string[] | null;
-  favorite_music: { title: string; image_url: string; link: string }[] | null;
-  favorite_movies: { title: string; image_url: string; link: string }[] | null;
-  favorite_series: { title: string; image_url: string; link: string }[] | null;
-  favorite_anime: { title: string; image_url: string; link: string }[] | null;
+  favorite_music: FavoriteItem[] | null;
+  favorite_movies: FavoriteItem[] | null;
+  favorite_series: FavoriteItem[] | null;
+  favorite_anime: FavoriteItem[] | null;
 };
 
 const fallbackProfile: AboutProfile = {
@@ -115,7 +125,6 @@ export default function AboutMePage() {
   const [videosUnlocked, setVideosUnlocked] = useState(false);
   const [videoError, setVideoError] = useState("");
   
-  // State untuk kontrol Audio & Gerbang Interaksi
   const [hasInteracted, setHasInteracted] = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);
 
@@ -232,7 +241,6 @@ export default function AboutMePage() {
 
   const nowPlayingAudio = profile.audio_url || "";
 
-  // Fungsi untuk trigger masuk halaman + mainkan audio secara otomatis
   const handleEnterPage = () => {
     setHasInteracted(true);
     if (audioRef.current) {
@@ -258,7 +266,6 @@ export default function AboutMePage() {
     <main className={`${inter.className} relative min-h-screen overflow-x-hidden bg-[#020202] text-[#aaaaaa] font-light text-[13px] antialiased selection:bg-white/10 selection:text-white`}>
       <Background rainDrops={rainDrops} />
 
-      {/* Hidden Audio Element */}
       {nowPlayingAudio && (
         <audio
           ref={audioRef}
@@ -268,7 +275,6 @@ export default function AboutMePage() {
         />
       )}
 
-      {/* Aesthetic Autoplay Gate Overlay */}
       {!hasInteracted && nowPlayingAudio && (
         <div className="fixed inset-0 z-[100] flex flex-col items-center justify-center bg-[#020202]/95 backdrop-blur-xl transition-all duration-1000 animate-fade-in">
           <div className="text-center space-y-6 max-w-sm px-6">
@@ -358,7 +364,6 @@ export default function AboutMePage() {
               </div>
             </section>
 
-            {/* UPGRADED AUDIO BOX (Custom Aesthetic Control) */}
             <section className="overflow-hidden rounded-3xl border border-white/[0.045] bg-white/[0.012] shadow-[0_22px_60px_rgba(0,0,0,0.5)] backdrop-blur-xl">
               <div className="border-b border-white/[0.045] px-5 py-4">
                 <div className="flex items-center justify-between gap-4">
@@ -390,7 +395,6 @@ export default function AboutMePage() {
                         </div>
                       </div>
 
-                      {/* Aesthetic Waveform Animation Indicator */}
                       {isPlaying && (
                         <div className="flex items-end gap-[2px] h-3 px-1">
                           <div className="w-[1.5px] bg-white/40 rounded-full animate-[wave_0.6s_ease-in-out_infinite_alternate]" />
@@ -657,37 +661,71 @@ const SectionHeader = ({ title, subtitle }: { title: string; subtitle: string })
   </div>
 );
 
-const FavoriteShelf = ({ title, items }: { title: string; items: { title: string; image_url: string; link: string }[] }) => (
-  <div>
-    <div className="mb-3 flex items-center gap-2">
-      <Sparkles size={11} strokeWidth={1.5} className="text-[#666666]" />
-      <p className="text-[8px] uppercase tracking-[0.22em] text-[#777777]">{title}</p>
+const FavoriteShelf = ({ title, items }: { title: string; items: FavoriteItem[] }) => {
+  const safeItems = items.filter((item) => item.title || item.image_url || item.link);
+
+  return (
+    <div>
+      <div className="mb-3 flex items-center gap-2">
+        <Sparkles size={11} strokeWidth={1.5} className="text-[#666666]" />
+        <p className="text-[8px] uppercase tracking-[0.22em] text-[#777777]">{title}</p>
+      </div>
+
+      {safeItems.length > 0 ? (
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+          {safeItems.map((item, index) => {
+            const card = (
+              <>
+                {item.image_url ? (
+                  <img src={item.image_url} alt={item.title} className="h-full w-full object-cover grayscale opacity-45 transition-all duration-1000 group-hover:scale-105 group-hover:opacity-82" />
+                ) : (
+                  <div className="flex h-full w-full items-center justify-center text-[#444444]">
+                    <Sparkles size={18} />
+                  </div>
+                )}
+                <div className="absolute inset-0 bg-gradient-to-t from-black via-black/48 to-transparent" />
+                <div className="absolute bottom-3 left-3 right-3 space-y-1">
+                  <p className="line-clamp-2 text-[8px] uppercase tracking-[0.16em] text-white/85">{item.title}</p>
+                  {(item.subtitle || item.year) && (
+                    <p className="line-clamp-1 text-[7px] uppercase tracking-[0.14em] text-[#777777]">
+                      {[item.subtitle, item.year].filter(Boolean).join(" · ")}
+                    </p>
+                  )}
+                </div>
+              </>
+            );
+
+            const className = "group relative aspect-square overflow-hidden rounded-3xl border border-white/[0.045] bg-white/[0.012] shadow-[0_18px_50px_rgba(0,0,0,0.48)] backdrop-blur-xl transition-all duration-700 hover:-translate-y-1 hover:border-white/10 hover:bg-white/[0.026]";
+
+            if (!item.link) {
+              return (
+                <div key={`${item.title}-${index}`} className={className}>
+                  {card}
+                </div>
+              );
+            }
+
+            return (
+              <a
+                key={`${item.title}-${index}`}
+                href={item.link}
+                target="_blank"
+                rel="noreferrer"
+                className={className}
+              >
+                {card}
+              </a>
+            );
+          })}
+        </div>
+      ) : (
+        <div className="flex min-h-[150px] items-center justify-center rounded-3xl border border-dashed border-white/[0.045] bg-black/25 text-[8px] uppercase tracking-[0.2em] text-[#555555]">
+          nothing saved here yet
+        </div>
+      )}
     </div>
-    <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-      {items.map((item) => (
-        <a
-          key={item.title}
-          href={item.link}
-          target="_blank"
-          rel="noreferrer"
-          className="group relative aspect-square overflow-hidden rounded-3xl border border-white/[0.045] bg-white/[0.012] shadow-[0_18px_50px_rgba(0,0,0,0.48)] backdrop-blur-xl transition-all duration-700 hover:-translate-y-1 hover:border-white/10 hover:bg-white/[0.026]"
-        >
-          {item.image_url ? (
-            <img src={item.image_url} alt={item.title} className="h-full w-full object-cover grayscale opacity-45 transition-all duration-1000 group-hover:scale-105 group-hover:opacity-82" />
-          ) : (
-            <div className="flex h-full w-full items-center justify-center text-[#444444]">
-              <Sparkles size={18} />
-            </div>
-          )}
-          <div className="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-transparent" />
-          <div className="absolute bottom-3 left-3 right-3">
-            <p className="line-clamp-2 text-[8px] uppercase tracking-[0.16em] text-white/80">{item.title}</p>
-          </div>
-        </a>
-      ))}
-    </div>
-  </div>
-);
+  );
+};
 
 function Background({ rainDrops }: { rainDrops: RainDrop[] }) {
   return (
@@ -736,7 +774,6 @@ function GlobalStyles() {
       @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); filter: blur(4px); } to { opacity: 1; transform: translateY(0); filter: blur(0); } }
       .animate-fade-in { animation: fadeIn 1.8s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
       
-      /* Waveform Animation Keyframe */
       @keyframes wave {
         0% { height: 4px; }
         100% { height: 14px; }
