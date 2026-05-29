@@ -13,7 +13,6 @@ import {
   Mail,
   ShieldQuestion,
   Ghost,
-  Mic2,
   Gamepad2,
   UserCircle2,
   EyeOff,
@@ -300,7 +299,7 @@ export default function StrangeClausePage() {
       <div className="relative z-20 mx-auto grid max-w-[1500px] grid-cols-1 gap-12 px-6 pb-24 pt-36 sm:px-12 md:px-20 md:pt-44 lg:grid-cols-12 lg:gap-16 lg:px-28 xl:gap-24 xl:px-36">
         <div className="h-fit w-full lg:sticky lg:top-44 lg:col-span-4">
           <aside className="rounded-3xl border border-white/[0.045] bg-white/[0.012] p-6 shadow-[0_30px_80px_rgba(0,0,0,0.62)] backdrop-blur-xl sm:p-8">
-          <div className="mb-5 flex items-center gap-2">
+            <div className="mb-5 flex items-center gap-2">
             <span className="h-1 w-1 rounded-full bg-white/40 shadow-[0_0_8px_rgba(255,255,255,0.35)]" />
             <p className="text-[8.5px] uppercase tracking-[0.24em] text-[#6a6a6a]">
               box number four
@@ -488,34 +487,95 @@ export default function StrangeClausePage() {
           <section id="frequencies" className="scroll-mt-44">
             <SectionHeader title="THE RADIO STATION" subtitle="background hum" />
 
-            <div className="rounded-2xl border border-white/[0.045] bg-white/[0.012] px-5 py-6 shadow-[0_16px_45px_rgba(0,0,0,0.5)] backdrop-blur-xl transition-all duration-700 hover:border-white/10 hover:bg-white/[0.022] sm:px-6">
-              <div className="mb-5 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-                <div className="flex min-w-0 items-center gap-2">
-                  <Mic2 size={13} className="shrink-0 text-[#666666] stroke-[1.5px]" />
-                  <h3 className="truncate text-[9px] font-light uppercase tracking-[0.2em] text-white/70 sm:text-[9.5px]">
-                    {activeTrack?.title || "some small noise from the radio"}
-                  </h3>
-                </div>
-
-                <p className="text-[8px] uppercase tracking-[0.2em] text-[#444444]">
-                  {activeTrack?.artist || "static"}
-                </p>
-              </div>
-
+            <div className="rounded-2xl border border-white/[0.045] bg-white/[0.012] px-5 py-5 shadow-[0_16px_45px_rgba(0,0,0,0.5)] backdrop-blur-xl transition-all duration-700 hover:border-white/10 hover:bg-white/[0.022] sm:px-6">
               {activeTrack ? (
                 <>
-                  <div className="relative overflow-hidden rounded-2xl border border-white/[0.045] bg-black p-1">
-                    <iframe
-                      key={activeTrack.spotify_track_id}
-                      src={`https://open.spotify.com/embed/track/${activeTrack.spotify_track_id}?utm_source=generator&theme=0`}
-                      width="100%"
-                      height="88"
-                      allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
-                      className="block border-0 grayscale opacity-45 transition-all duration-700 hover:opacity-78"
-                    />
+                  <div className="relative overflow-hidden rounded-[24px] border border-white/[0.055] bg-[#050505] p-4 shadow-[0_22px_65px_rgba(0,0,0,0.62)] sm:p-5">
+                    <div className="pointer-events-none absolute left-5 right-5 top-0 h-px bg-gradient-to-r from-transparent via-white/[0.12] to-transparent" />
+
+                    <div className="rounded-[18px] border border-white/[0.06] bg-white/[0.018] p-3">
+                      <div className="flex items-center justify-between gap-3 border border-white/[0.055] bg-[#d8d8d8]/[0.08] px-3 py-2">
+                        <p className="truncate text-[8px] font-medium uppercase tracking-[0.24em] text-white/68">
+                          strange clause cassette adaptor
+                        </p>
+
+                        <p className="shrink-0 text-[7px] uppercase tracking-[0.2em] text-[#777777]">
+                          this side up
+                        </p>
+                      </div>
+
+                      <div className="mt-5 grid grid-cols-[1fr_auto_1fr] items-center gap-3">
+                        <div className="space-y-1">
+                          {Array.from({ length: 7 }).map((_, index) => (
+                            <div
+                              key={`left-line-${index}`}
+                              className="ml-auto h-px bg-white/[0.12]"
+                              style={{ width: `${34 + index * 5}%` }}
+                            />
+                          ))}
+                        </div>
+
+                        <div className="grid grid-cols-[auto_auto_auto] items-center gap-4">
+                          <div className="relative h-14 w-14 rounded-full border border-white/[0.08] bg-black/60 shadow-inner sm:h-16 sm:w-16">
+                            <div className="absolute inset-3 rounded-full border border-white/[0.07] bg-[#050505]" />
+                            <div className="absolute left-1/2 top-1/2 h-2.5 w-8 -translate-x-1/2 -translate-y-1/2 rounded-full bg-white/[0.08]" />
+                            <div className="absolute left-1/2 top-1/2 h-8 w-2.5 -translate-x-1/2 -translate-y-1/2 rounded-full bg-white/[0.08]" />
+                          </div>
+
+                          <div className="min-w-[82px] text-center">
+                            <p className="text-[7px] uppercase tracking-[0.18em] text-[#777777]">
+                              compact disc
+                            </p>
+                            <p className="mt-1 text-[15px] font-medium lowercase tracking-[-0.03em] text-white/75">
+                              low echo
+                            </p>
+                            <p className="mt-1 text-[6.5px] uppercase tracking-[0.22em] text-[#555555]">
+                              digital audio
+                            </p>
+                          </div>
+
+                          <div className="relative h-14 w-14 rounded-full border border-white/[0.08] bg-black/60 shadow-inner sm:h-16 sm:w-16">
+                            <div className="absolute inset-3 rounded-full border border-white/[0.07] bg-[#050505]" />
+                            <div className="absolute left-1/2 top-1/2 h-2.5 w-8 -translate-x-1/2 -translate-y-1/2 rounded-full bg-white/[0.08]" />
+                            <div className="absolute left-1/2 top-1/2 h-8 w-2.5 -translate-x-1/2 -translate-y-1/2 rounded-full bg-white/[0.08]" />
+                          </div>
+                        </div>
+
+                        <div className="space-y-1">
+                          {Array.from({ length: 7 }).map((_, index) => (
+                            <div
+                              key={`right-line-${index}`}
+                              className="h-px bg-white/[0.12]"
+                              style={{ width: `${64 - index * 5}%` }}
+                            />
+                          ))}
+                        </div>
+                      </div>
+
+                      <div className="mt-5 flex items-end justify-between gap-4">
+                        <div className="rounded-xl border border-white/[0.055] bg-black/45 px-3 py-2">
+                          <p className="text-[7px] uppercase tracking-[0.18em] text-[#555555]">
+                            play this quiet noise through the old room stereo
+                          </p>
+                        </div>
+
+                        <p className="max-w-[64px] text-right text-[7px] uppercase leading-relaxed tracking-[0.18em] text-[#666666]">
+                          keep the volume low
+                        </p>
+                      </div>
+
+                      <iframe
+                        key={activeTrack.spotify_track_id}
+                        src={`https://open.spotify.com/embed/track/${activeTrack.spotify_track_id}?utm_source=generator&theme=0`}
+                        width="100%"
+                        height="88"
+                        allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
+                        className="mt-4 block border-0 grayscale opacity-35 transition-all duration-700 hover:opacity-70"
+                      />
+                    </div>
                   </div>
 
-                  <div className="mt-5 flex justify-end gap-2">
+                  <div className="mt-5 flex items-center justify-between gap-3">
                     <TrackButton
                       icon={<FaChevronLeft size={8} />}
                       onClick={() =>
@@ -525,6 +585,10 @@ export default function StrangeClausePage() {
                         )
                       }
                     />
+
+                    <p className="text-[7.5px] uppercase tracking-[0.22em] text-[#444444]">
+                      turn the tape slowly
+                    </p>
 
                     <TrackButton
                       icon={<FaChevronRight size={8} />}
@@ -537,8 +601,8 @@ export default function StrangeClausePage() {
                   </div>
                 </>
               ) : (
-                <div className="flex min-h-[110px] items-center justify-center rounded-2xl border border-dashed border-white/[0.045] bg-black/40 text-[8px] uppercase tracking-[0.2em] text-[#444444]">
-                  nothing is coming out of the speakers
+                <div className="flex min-h-[150px] items-center justify-center rounded-[24px] border border-dashed border-white/[0.045] bg-black/40 text-[8px] uppercase tracking-[0.2em] text-[#444444]">
+                  nothing is coming out of the cassette
                 </div>
               )}
             </div>
