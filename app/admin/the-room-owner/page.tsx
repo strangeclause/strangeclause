@@ -1112,6 +1112,9 @@ const RemoveButton = ({ onClick }: { onClick: () => void }) => (
   </button>
 );
 
+const TMDB_API_KEY = "8d314751e43387fa2ea52b62958d2ef9";
+const TMDB_IMAGE_BASE = "https://image.tmdb.org/t/p/w780";
+
 const getCleanArtwork = (url?: string) => {
   if (!url) return "";
   return url
@@ -1125,12 +1128,76 @@ const normalizeYear = (value?: string | null) => {
   return String(value).slice(0, 4);
 };
 
+const getTmdbImage = (path?: string | null) => {
+  if (!path) return "";
+  return `${TMDB_IMAGE_BASE}${path}`;
+};
+
+const getTmdbTitle = (item: any, source: FavoriteSource) => {
+  if (source === "series") {
+    return item.name || item.original_name || "untitled series";
+  }
+
+  return item.title || item.original_title || "untitled movie";
+};
+
+const getTmdbDate = (item: any, source: FavoriteSource) => {
+  if (source === "series") {
+    return item.first_air_date || "";
+  }
+
+  return item.release_date || "";
+};
+
+const searchTmdbItems = async (
+  source: "movie" | "series",
+  query: string
+): Promise<FavoriteApiResult[]> => {
+  const mediaType = source === "series" ? "tv" : "movie";
+  const response = await fetch(
+    `https://api.themoviedb.org/3/search/${mediaType}?query=${encodeURIComponent(
+      query
+    )}&api_key=${TMDB_API_KEY}&include_adult=false&language=en-US&page=1`
+  );
+
+  if (!response.ok) {
+    throw new Error("tmdb search failed");
+  }
+
+  const payload = await response.json();
+
+  return (payload.results || []).slice(0, 12).map((item: any) => {
+    const title = getTmdbTitle(item, source);
+    const year = normalizeYear(getTmdbDate(item, source));
+    const rating =
+      typeof item.vote_average === "number" && item.vote_average > 0
+        ? `tmdb ${item.vote_average.toFixed(1)}`
+        : source === "series"
+        ? "series / drama"
+        : "movie";
+
+    return {
+      api_id: String(item.id || `${source}-${title}`),
+      title,
+      subtitle: rating,
+      year,
+      image_url: getTmdbImage(item.poster_path || item.backdrop_path),
+      link: `https://www.themoviedb.org/${mediaType}/${item.id}`,
+      source: source === "series" ? "tmdb tv" : "tmdb movie",
+    };
+  });
+};
+
 const searchFavoriteItems = async (
   source: FavoriteSource,
   query: string
 ): Promise<FavoriteApiResult[]> => {
   const cleanQuery = query.trim();
   if (!cleanQuery) return [];
+
+  if (source === "movie" || source === "series") {
+    return searchTmdbItems(source, cleanQuery);
+  }
 
   if (source === "anime") {
     const response = await fetch(
@@ -1149,40 +1216,15 @@ const searchFavoriteItems = async (
     }));
   }
 
-  if (source === "series") {
-    const response = await fetch(
-      `https://api.tvmaze.com/search/shows?q=${encodeURIComponent(cleanQuery)}`
-    );
-    const payload = await response.json();
-
-    return (payload || []).slice(0, 8).map((result: any) => {
-      const show = result.show || {};
-      return {
-        api_id: String(show.id || show.url || show.name),
-        title: show.name || "untitled series",
-        subtitle: Array.isArray(show.genres) && show.genres.length ? show.genres.slice(0, 2).join(" · ") : show.type || "series",
-        year: normalizeYear(show.premiered),
-        image_url: show.image?.original || show.image?.medium || "",
-        link: show.officialSite || show.url || "",
-        source: "tvmaze",
-      };
-    });
-  }
-
-  const entity = source === "music" ? "song" : "movie";
-  const media = source === "music" ? "music" : "movie";
   const response = await fetch(
-    `https://itunes.apple.com/search?term=${encodeURIComponent(cleanQuery)}&media=${media}&entity=${entity}&limit=8`
+    `https://itunes.apple.com/search?term=${encodeURIComponent(cleanQuery)}&media=music&entity=song&limit=8`
   );
   const payload = await response.json();
 
   return (payload.results || []).map((item: any) => ({
     api_id: String(item.trackId || item.collectionId || item.trackViewUrl || item.trackName),
     title: item.trackName || item.collectionName || "untitled",
-    subtitle:
-      source === "music"
-        ? item.artistName || "music"
-        : item.primaryGenreName || "movie",
+    subtitle: item.artistName || "music",
     year: normalizeYear(item.releaseDate),
     image_url: getCleanArtwork(item.artworkUrl100 || item.artworkUrl600),
     link: item.trackViewUrl || item.collectionViewUrl || "",
